@@ -75,6 +75,8 @@ The integration works also without this feature, but it's much better with it.
 
 ## Using the integration
 
+### Speakers and Bang Olufsen Sources
+
 Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can integrate in your normal lovelace interface. I use [mini media player ](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and sources from your Home Assistant dashboard.
 
 ![Mini Media Player](./mini_media_player.png)
@@ -86,16 +88,18 @@ Remember that only one source is shared on all the Masterlink speakers (it's a s
 
 The integration also forwards events to Home Assistant that you can use for your automations.
 
-### MasterLink Gateway official commands
+### MasterLink Gateway official commands: Lights and Virtual Buttons
 
-* The vanilla MasterLink Gateway Protocol only forwards: Virtual Buttons, Light commands, Control commands, and "All Standby" commands. The component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to Virtual Button and Light events fired by the platform.
+* The vanilla MasterLink Gateway Protocol only forwards: Virtual Buttons, Light commands, Control commands, and "All Standby" commands. The component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to Virtual Button and Light events fired by the platform. 
 
-For example, this event catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
+For example, if the user selects <LIGHT> <1> on their Beo4 or BeoOne remote control, the command will flow through as an event to Home assistant which you can use to control your lights.
+
+For example, this Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
 
 
 ![All Standby Event](./all_standby_event.png)
 
-There are only 3 events of this type:
+There are only 3 events fired by the official integration:
 
 | Event | Payload Type | Arguments |
 | ----- | ------------ | --------- |
