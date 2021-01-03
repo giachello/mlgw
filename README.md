@@ -86,6 +86,8 @@ Remember that only one source is shared on all the Masterlink speakers (it's a s
 
 The integration also forwards events to Home Assistant that you can use for your automations.
 
+### MasterLink Gateway official commands
+
 * The vanilla MasterLink Gateway Protocol only forwards: Virtual Buttons, Light commands, Control commands, and "All Standby" commands. The component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to Virtual Button and Light events fired by the platform.
 
 For example, this event catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
@@ -93,12 +95,40 @@ For example, this event catches "All Standby" (which means the entire B&O system
 
 ![All Standby Event](./all_standby_event.png)
 
+There are only 3 events of this type:
 
-* The enhanced Undocumented Feature also forwards *ALL* MasterLink events that happen on the bus so you can use them to drive much more interesting behavior. For example, you can start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the button that typically activates the Aux input on the B&O equipment where you can connect a streaming devices like a Chromecast Audio).
+| Event | Payload Type | Arguments |
+| ----- | ------------ | --------- |
+| mlgw.MLGW_telegram | all_standby | *none* |
+| mlgw.MLGW_telegram | virtual_button | button: button number, action: (PRESS,RELEASE,HOLD) |
+| mlgw.MLGW_telegram | light_control_event | room: room number, type: (CONTROL or LIGHT), command: the BEO4 key pressed after "LIGHT" |
+
+
+### Undocumented enhanced functionality
+
+* The enhanced Undocumented Feature also forwards *ALL* MasterLink events that happen on the bus so you can use them to drive much more interesting behavior. 
+
+For example, you can start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the button that typically activates the Aux input on the B&O equipment where you can connect a streaming devices like a Chromecast Audio).
 
 ![BEO4 key event](./beo4_key_event.png)
 
+Another example
+
 
 A full list of Key commands is available starting at line 122 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
+
+There are too many ML commands to document here (see const.py), but a few particularly useful ones are listed below.
+
+| Event | Payload Type | Arguments | Payload Argument | Description |
+| ----- | ------------ | --------- | ---------------- | ----------- |
+| mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker requests a certain source |
+| mlgw.ML_telegram | RELEASE | from_device, to_device | Speaker turns off |
+| mlgw.ML_telegram | STATUS_INFO | from_device, to_device | source, channel_track, activity, source_medium, picture_identifier | Reports source status changes |
+| mlgw.ML_telegram | TRACK_INFO | from_device, to_device | subtype (Change Source, Current Source) , prev_source, source | Reports changes in the source |
+| mlgw.ML_telegram | STANDBY | from_device, to_device |  | Device turns off |
+| mlgw.ML_telegram | BEO4_KEY | from_device, to_device | source, command  | Beo4 key pressed on a speaker | 
+| mlgw.ML_telegram | TIMER | from_device, to_device |  | Timer functionality invoked |
+| mlgw.ML_telegram | MLGW REMOTE BEO4 | from_device, to_device | command, dest_selector  | issued when an external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
+| mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the Radio or CD track that is playing | 
 
 
