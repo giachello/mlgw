@@ -1,12 +1,12 @@
 # Bang & Olufsen MasterLink Gateway / BeoLink Gateway Home Assistant component
 
-This components integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to the Home Assistant.
+This components integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to the Home Assistant. 
 
 [Masterlink Gateway Product Description](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/ML%20Gateway_Installation%20Guide%202v2.pdf)
 
 [BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
 
-This component manages communication To and From the MLGW and Beolink Gateway. It includes support for a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below).
+This component manages communication To and From the MLGW and Beolink Gateway. It includes support for a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below). Note that Masterlink Gateway MK I is not supported because it only has a serial connection, whereas this module requires ethernet to the MLGW.
 
 ## Installation
 
