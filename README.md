@@ -121,6 +121,8 @@ A full list of Key commands is available starting at line 122 in this file: [htt
 
 There are too many ML commands to document here (see const.py and gateway.py), but a few particularly useful ones are listed below.
 
+_NOTE: the from_device and to_device in the Masterlink traffic are not the same as the "MLN" used above. In the future, I'll provide functionality to reconnect the two numbers_
+
 | Event | Payload Type | Arguments | Payload Argument | Description |
 | ----- | ------------ | --------- | ---------------- | ----------- |
 | mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker requests a certain source |
@@ -133,4 +135,10 @@ There are too many ML commands to document here (see const.py and gateway.py), b
 | mlgw.ML_telegram | MLGW REMOTE BEO4 | from_device, to_device | command, dest_selector  | issued when an external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
 | mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the Radio or CD track that is playing | 
 
+
+
+## Not implemented / TODO
+
+* A proper config_flow to allow for UI-based configuration
+* Timer and Clock packets unpacking
 
