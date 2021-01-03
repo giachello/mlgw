@@ -112,14 +112,14 @@ For example, you can start Spotify by pressing the "green" button on your Beo4 r
 
 ![BEO4 key event](./beo4_key_event.png)
 
-Another example is to stop playback when the "Stop" button is pressed on the remote:
+Another example is to stop playback when the "Stop" button is pressed on the remote (in this case, "media_player.bang_olfusen" is the Chromecast connected to the input of the B&O audio system):
 
 ![stop event](./stop_event.png)
 
 
 A full list of Key commands is available starting at line 122 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
 
-There are too many ML commands to document here (see const.py), but a few particularly useful ones are listed below.
+There are too many ML commands to document here (see const.py and gateway.py), but a few particularly useful ones are listed below.
 
 | Event | Payload Type | Arguments | Payload Argument | Description |
 | ----- | ------------ | --------- | ---------------- | ----------- |
