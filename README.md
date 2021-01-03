@@ -92,7 +92,7 @@ The integration also forwards events to Home Assistant that you can use for your
 
 * The vanilla MasterLink Gateway Protocol only forwards: Virtual Buttons, Light commands, Control commands, and "All Standby" commands. The component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to Virtual Button and Light events fired by the platform. 
 
-For example, if the user selects <LIGHT> <1> on their Beo4 or BeoOne remote control, the command will flow through as an event to Home assistant which you can use to control your lights.
+For example, if the user selects LIGHT-1 on their Beo4 or BeoOne remote control, the command will flow through as an Event to Home assistant which you can use to control your lights.
 
 For example, this Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
 
