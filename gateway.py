@@ -60,7 +60,6 @@ class MasterLinkGateway:
         self._socket = None
         self.buffersize = 1024
         self._connectedMLGW = False
-        self.telegramlogging = True
         self.stopped = threading.Event()
         # to manage the sources and devices
         self._beolink_source = default_source
@@ -158,7 +157,7 @@ class MasterLinkGateway:
                 print(self._tn)
                 self._tn.close()
             except:
-                _LOGGER.warning("Error closing ML CLI")
+                _LOGGER.error("Error closing ML CLI")
             _LOGGER.warning("Closed connection to ML CLI")
 
     # This is the thread function to manage the ML CLI connection
@@ -171,7 +170,7 @@ class MasterLinkGateway:
             try:  # nonblocking read from the connection
                 input_bytes = input_bytes + self._tn.read_very_eager().decode("ascii")
             except EOFError:
-                _LOGGER.warning("ML CLI Thread: EOF Error ")
+                _LOGGER.error("ML CLI Thread: EOF Error ")
                 self.ml_close()
                 return
 
@@ -230,7 +229,7 @@ class MasterLinkGateway:
             self.mlgw_send(0x30, payload)  # login Request
 
     def mlgw_ping(self):
-        _LOGGER.info("ping")
+        _LOGGER.debug("ping")
         self.mlgw_send(0x36, "")
 
     ## Close connection to mlgw
@@ -242,7 +241,7 @@ class MasterLinkGateway:
                 self._socket.shutdown(socket.SHUT_RDWR)
                 self._socket.close()
             except:
-                _LOGGER.info("Error closing connection to ML Gateway")
+                _LOGGER.warning("Error closing connection to ML Gateway")
                 return
             _LOGGER.info("Closed connection to ML Gateway")
 
@@ -258,13 +257,12 @@ class MasterLinkGateway:
                 self._telegram.append(p)
             self._socket.sendall(self._telegram)
 
-            if self.telegramlogging:
-                _LOGGER.info(
-                    "mlgw: >SENT: "
-                    + _getpayloadtypestr(msg_type)
-                    + ": "
-                    + _getpayloadstr(self._telegram)
-                )  # debug
+            _LOGGER.debug(
+                "mlgw: >SENT: "
+                + _getpayloadtypestr(msg_type)
+                + ": "
+                + _getpayloadstr(self._telegram)
+            )  # debug
 
             # Sleep to allow msg to arrive
             time.sleep(1)
@@ -305,7 +303,7 @@ class MasterLinkGateway:
             try:
                 response = self._socket.recv(self.buffersize)
             except KeyboardInterrupt:
-                _LOGGER.info("mlgw keyboard interrupt")
+                _LOGGER.warning("mlgw: keyboard interrupt in listen thread")
                 self.mlgw_close()
             except socket.timeout:
                 self._lastping = self._lastping + self._recvtimeout
@@ -321,7 +319,7 @@ class MasterLinkGateway:
                 msg_type = _getpayloadtypestr(msg_byte)
                 msg_payload = _getpayloadstr(response)
 
-                _LOGGER.debug(f"Msg type: {msg_type}. Payload: {msg_payload}")
+                _LOGGER.debug(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
 
                 if msg_byte == 0x20:  # Virtual Button event
                     virtual_btn = response[4]
@@ -330,7 +328,7 @@ class MasterLinkGateway:
                     else:
                         virtual_action = _getvirtualactionstr(response[5])
                     _LOGGER.info(
-                        f"Virtual button pressed: button {virtual_btn} action {virtual_action}"
+                        f"mlgw: Virtual button pressed: button {virtual_btn} action {virtual_action}"
                     )
                     decoded = dict()
                     decoded["payload_type"] = "virtual_button"
@@ -340,17 +338,17 @@ class MasterLinkGateway:
 
                 elif msg_byte == 0x31:  # Login Status
                     if msg_payload == "FAIL":
-                        _LOGGER.info("Login needed")
+                        _LOGGER.info("mlgw: Login needed")
                         self.mlgw_login()
                     elif msg_payload == "OK":
-                        _LOGGER.info("Login successful")
+                        _LOGGER.info("mlgw: Login successful")
                         self.mlgw_get_serial()
 
                 elif msg_byte == 0x37:  # Pong (Ping response)
-                    _LOGGER.info("pong")
+                    _LOGGER.debug("mlgw: pong")
 
                 elif msg_byte == 0x02:  # Source status
-                    _LOGGER.info(f"Msg type: {msg_type}. Payload: {msg_payload}")
+                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     self._sourceMLN = _getmlnstr(response[4])
                     self._source = _getselectedsourcestr(response[5]).upper()
                     self._sourceMediumPosition = _hexword(response[6], response[7])
@@ -363,19 +361,21 @@ class MasterLinkGateway:
                     )
 
                 elif msg_byte == 0x05:  # All Standby
-                    _LOGGER.info(f"Msg type: {msg_type}. Payload: {msg_payload}")
-                    if (
-                        self._devices is not None
-                    ):  # set all connected devices state to off
+                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
+                    if self._devices is not None:
+                        # set all connected devices state to off
                         for i in self._devices:
                             i.set_state(STATE_OFF)
+                    decoded = dict()
+                    decoded["payload_type"] = "all_standby"
+                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
                 elif msg_byte == 0x04:  # Light / Control command
                     lcroom = _getroomstr(response[4])
                     lctype = _getdictstr(mlgw_lctypedict, response[5])
                     lccommand = _getbeo4commandstr(response[6])
                     _LOGGER.info(
-                        f"Light/Control command: room: {lcroom} type: {lctype} command {lccommand}"
+                        f"mlgw: Light/Control command: room: {lcroom} type: {lctype} command {lccommand}"
                     )
                     decoded = dict()
                     decoded["payload_type"] = "light_control_event"
@@ -385,7 +385,7 @@ class MasterLinkGateway:
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
                 else:
-                    _LOGGER.info(f"Msg type: {msg_type}. Payload: {msg_payload}")
+                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
 
         self.mlgw_close()
 
@@ -405,13 +405,12 @@ class MasterLinkGateway:
                 _LOGGER.error("mlgw: Received telegram with SOH byte <> 0x01")
             if self._mlgwdata[3] != 0x00:
                 _LOGGER.error("mlgw: Received telegram with spare byte <> 0x00")
-            if self.telegramlogging:
-                _LOGGER.info(
-                    "mlgw: <RCVD: '"
-                    + _getpayloadtypestr(self._mlgwdata[1])
-                    + "': "
-                    + str(self._payloadstr)
-                )  # debug
+            _LOGGER.debug(
+                "mlgw: <RCVD: '"
+                + _getpayloadtypestr(self._mlgwdata[1])
+                + "': "
+                + str(self._payloadstr)
+            )  # debug
             return (self._mlgwdata[1], str(self._payloadstr))
 
 

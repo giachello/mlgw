@@ -2,12 +2,13 @@
   "domain": "mlgw",
   "name": "MasterLink Gateway",
   "config_flow": false,
-  "documentation": "https://www.home-assistant.io/integrations/mlgw",
+  "documentation": "https://github.com/giachello/mlgw",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
   "dependencies": [],
+  "after_dependencies": [ "media_player" ],
   "codeowners": [
     "@giachello"
   ]

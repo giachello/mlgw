@@ -172,6 +172,9 @@ class BeoSpeaker(MediaPlayerEntity):
                     elif _event.data["payload_type"] == "GOTO_SOURCE":
                         _LOGGER.info("ML LOG said: GOTO_SOURCE id %s" % (self._ml))
                         self._pwon = True
+                        self._source = (
+                            self._gateway.beolink_source
+                        )  # retrive source from gateway
 
         if self._gateway._connectedML:
             self._stop_listening = gateway._hass.bus.async_listen(

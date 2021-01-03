@@ -1,6 +1,6 @@
 """The MasterLink Gateway integration."""
 import asyncio
-from homeassistant.components.mlgw.gateway import create_mlgw_gateway
+from .gateway import create_mlgw_gateway
 from .media_player import BeoSpeaker
 import logging
 
