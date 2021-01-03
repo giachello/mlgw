@@ -112,7 +112,9 @@ For example, you can start Spotify by pressing the "green" button on your Beo4 r
 
 ![BEO4 key event](./beo4_key_event.png)
 
-Another example
+Another example is to stop playback when the "Stop" button is pressed on the remote:
+
+![stop event](./stop_event.png)
 
 
 A full list of Key commands is available starting at line 122 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
@@ -122,7 +124,7 @@ There are too many ML commands to document here (see const.py), but a few partic
 | Event | Payload Type | Arguments | Payload Argument | Description |
 | ----- | ------------ | --------- | ---------------- | ----------- |
 | mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker requests a certain source |
-| mlgw.ML_telegram | RELEASE | from_device, to_device | Speaker turns off |
+| mlgw.ML_telegram | RELEASE | from_device, to_device | | Speaker turns off |
 | mlgw.ML_telegram | STATUS_INFO | from_device, to_device | source, channel_track, activity, source_medium, picture_identifier | Reports source status changes |
 | mlgw.ML_telegram | TRACK_INFO | from_device, to_device | subtype (Change Source, Current Source) , prev_source, source | Reports changes in the source |
 | mlgw.ML_telegram | STANDBY | from_device, to_device |  | Device turns off |
