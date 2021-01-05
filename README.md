@@ -12,6 +12,8 @@ This component manages communication To and From the MLGW and Beolink Gateway. I
 
 Create a `mlgw` directory in `/config/custom_components/` and copy all the files in this repository into it.
 
+### Configure Home Assistant
+
 Then update your Configuration.yaml as follows (replace your specific host address and other information):
 ``` 
 mlgw:
