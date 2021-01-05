@@ -72,7 +72,7 @@ This integration uses a special undocumented feature of the Master Link Gateway 
 
 It allows all kinds of fun integrations. For example you can start and control your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
 
-For this to work, you must use 'username: admin', and the admin password as credentials. It won't work with normal users. Alsom, set **use_mllog: true** in the configuration.
+For this to work, you must use **'username: admin'**, and the admin password as credentials form the MLGW, because normal users do not have access to the feature. Also, set **'use_mllog: true'** in the configuration.
 
 The integration works also without this feature, but it's much better with it.
 
