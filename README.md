@@ -70,7 +70,7 @@ You can also add a room number, corresponding to your MLGW configuration.
 
 This integration uses a special undocumented feature of the Master Link Gateway that allows to listen into the actual ML traffic on the Masterlink bus and provides enhanced functionality. Specifically, it allows Home Assistant to fire events for things happening on the bus that wouldn't be provided by the stock MLGW official API, like speakers turning off, or key presses other than Light/Control presses. It allows all kinds of fun integrations like starting and controlling your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
 
-_You can see what is being fired by the MasterLink bus by activating the component and "DEBUG" logging on it. Then just look at your home-assistant.log file_
+_You can see what is being fired by the MasterLink bus by enabling "DEBUG" logging in Configuration.yaml. Then just look at your home-assistant.log file_
 
 ```
 logger:
