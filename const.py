@@ -48,7 +48,16 @@ ml_command_type_dict = dict(
         (0x82, "TRACK_INFO_LONG"),
         (0x87, "STATUS_INFO"),
         (0x94, "DVD_STATUS_INFO"),
-        (0x20, "MLGW REMOTE BEO4"),
+        (0x20, "MLGW_REMOTE_BEO4"),
+    ]
+)
+
+ml_command_type_request_key_subtype_dict = dict(
+    [
+        (0x01, "Request Key"),
+        (0x02, "Transfer Key"),
+        (0x04, "Key Received"),
+        (0xFF, "Undefined"),
     ]
 )
 
@@ -97,23 +106,23 @@ reverse_ml_destselectordict = {v.upper(): k for k, v in ml_destselectordict.item
 
 ml_selectedsourcedict = dict(
     [
-        (0x00, "None"),
+        (0x00, "NONE"),
         (0x0B, "TV"),
-        (0x15, "V.Mem"),
+        (0x15, "V.MEM"),
         (0x16, "DVD_2"),
         (0x1F, "DTV"),
         (0x29, "DVD"),
         (0x33, "V_AUX"),
         (0x3E, "V_AUX2"),
         (0x47, "PC"),
-        (0x6F, "Radio"),
-        (0x79, "A.Mem"),
-        (0x7A, "NMUSIC"),
+        (0x6F, "RADIO"),
+        (0x79, "A.MEM"),
+        (0x7A, "N.MUSIC"),
         (0x8D, "CD"),
         (0x97, "A_AUX"),
-        (0xA1, "NRADIO"),
+        (0xA1, "N.RADIO"),
         #  Dummy for 'Listen for all sources'
-        (0xFE, "<all>"),
+        (0xFE, "<ALL>"),
     ]
 )
 

@@ -71,7 +71,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
         nonlocal ml_listener_iteration
         if (
             _event.data["from_device"] == "MLGW"
-            and _event.data["payload_type"] == "MLGW REMOTE BEO4"
+            and _event.data["payload_type"] == "MLGW_REMOTE_BEO4"
             and _event.data["payload"]["command"] == "<all>"
         ):
             _LOGGER.info(
@@ -170,7 +170,10 @@ class BeoSpeaker(MediaPlayerEntity):
                         _LOGGER.info("ML LOG said: RELEASE id %s" % (self._ml))
                         self._pwon = False
                     elif _event.data["payload_type"] == "GOTO_SOURCE":
-                        _LOGGER.info("ML LOG said: GOTO_SOURCE id %s" % (self._ml))
+                        _LOGGER.info(
+                            "ML LOG said: GOTO_SOURCE %s on device %s"
+                            % (_event.data["payload"]["source"], self._ml)
+                        )
                         self._pwon = True
                         self._source = (
                             self._gateway.beolink_source

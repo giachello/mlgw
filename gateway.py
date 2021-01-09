@@ -94,20 +94,21 @@ class MasterLinkGateway:
                 raise ConnectionError
             self._tn.write(self._password.encode("ascii") + b"\n")
 
-            line = self._tn.read_until(
-                b"Logged in", 2
-            )  # The first line says "Logged In"
-            if line[-9:] != b"Logged in":
-                _LOGGER.debug("Response was: %s" % (line))
-                raise ConnectionError
+            #            line = self._tn.read_until(
+            #                b"Logged in", 3
+            #            )  # The first line says "Logged In"
+            #            if line[-9:] != b"Logged in":
+            #                _LOGGER.debug("Password Response was: %s" % (line))
+            #                raise ConnectionError
 
             line = self._tn.read_until(
                 b"MLGW >", 3
             )  # the third line should be the prompt
             if line[-6:] != b"MLGW >":
-                _LOGGER.debug("Response was: %s" % (line))
+                _LOGGER.debug("Password Response was: %s" % (line))
                 raise ConnectionError
 
+            # Enter the undocumented Masterlink Logging function
             self._tn.write(b"_MLLOG ONLINE\r\n")
             #            self._hass.async_create_task(self._ml_thread())
             threading.Thread(target=self._ml_thread).start()
@@ -119,6 +120,10 @@ class MasterLinkGateway:
 
         except EOFError as exc:
             _LOGGER.error("Error opening ML CLI connection to: %s", exc)
+            return False
+
+        except ConnectionError:
+            _LOGGER.error("Failed to connect, continuing without ML CLI")
             return False
 
     ## Open tcp connection to mlgw
@@ -193,6 +198,18 @@ class MasterLinkGateway:
                         "{:02x}".format(x) for x in telegram
                     )
                     _LOGGER.debug("Processing telegram: %s", encoded_telegram)
+
+                    # try to find the mln of the from_device and to_device
+                    if self._devices is not None:
+                        for x in self._devices:
+                            if x._ml == encoded_telegram["from_device"]:
+                                encoded_telegram["from_mln"] = x._mln
+                            if x._ml == encoded_telegram["to_device"]:
+                                encoded_telegram["to_mln"] = x._mln
+
+                    # if a GOTO Source telegram is received, set the beolink source to it
+                    if encoded_telegram["payload_type"] == "GOTO_SOURCE":
+                        self._beolink_source = encoded_telegram["payload"]["source"]
 
                     self._hass.add_job(
                         self._notify_incoming_ML_telegram, encoded_telegram
@@ -279,7 +296,7 @@ class MasterLinkGateway:
 
     ## Send Beo4 commmand and store the source name
     def mlgw_send_beo4_cmd_select_source(self, mln, dest, source):
-        self._source = source
+        self._beolink_source = source
         self.mlgw_send_beo4_cmd(mln, dest, BEO4_CMDS.get(source))
 
     def mlgw_send_virtual_btn_press(self, btn):
@@ -350,7 +367,7 @@ class MasterLinkGateway:
                 elif msg_byte == 0x02:  # Source status
                     _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     self._sourceMLN = _getmlnstr(response[4])
-                    self._source = _getselectedsourcestr(response[5]).upper()
+                    self._beolink_source = _getselectedsourcestr(response[5]).upper()
                     self._sourceMediumPosition = _hexword(response[6], response[7])
                     self._sourcePosition = _hexword(response[8], response[9])
                     self._sourceActivity = _getdictstr(
@@ -568,7 +585,7 @@ def decode_ml_to_string(telegram):
         elif telegram[9] == 0x02:
             decoded = decoded + " Transfter Key"
         elif telegram[9] == 0x04:
-            decoded = decoded + " Key Transfer Complete"
+            decoded = decoded + " Key Received"
         else:
             decoded = decoded + " Undefined"
     # what audio source
@@ -678,7 +695,7 @@ def decode_ml_to_dict(telegram):
         elif telegram[9] == 0x02:
             decoded["payload"]["subtype"] = "Transfter Key"
         elif telegram[9] == 0x04:
-            decoded["payload"]["subtype"] = "Key Transfer Complete"
+            decoded["payload"]["subtype"] = "Key Received"
         else:
             decoded["payload"]["subtype"] = "Undefined"
     # what audio source
