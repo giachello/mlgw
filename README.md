@@ -129,7 +129,6 @@ A full list of BEO4 Key commands is available starting at line 122 in this file:
 
 There are too many ML telegram types to document here (and a lot are undocumented publicly), but a few particularly useful ones are listed below (see const.py and gateway.py for more information).
 
-_NOTE: the from_device and to_device in the Masterlink traffic are not the same as the "MLN" used above. In the future, I'll provide functionality to reconnect the two numbers_
 
 | Event | Payload Type | Arguments | Payload Argument | Description |
 | ----- | ------------ | --------- | ---------------- | ----------- |
