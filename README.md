@@ -66,6 +66,9 @@ You can also add a room number, corresponding to your MLGW configuration.
       room: 1
 ```
 
+Put any NL devices at the end of the list. They typically start at MLN 20.
+
+
 ## Special Undocumented Feature: Direct Master Link Connection
 
 This integration uses a special undocumented feature of the Master Link Gateway that allows to listen into the actual ML traffic on the Masterlink bus and provides enhanced functionality. Specifically, it allows Home Assistant to fire events for things happening on the bus that wouldn't be provided by the stock MLGW official API, like speakers turning off, or key presses on the remote control, other than Light/Control. 
