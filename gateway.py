@@ -82,7 +82,7 @@ class MasterLinkGateway:
         return self._available_sources
 
     def ml_connect(self):
-        _LOGGER.info("Trying to connect to ML CLI")
+        _LOGGER.info("Trying to connect to ML CLI: %s" % (self._host))
         self._connectedML = False
 
         try:
@@ -90,7 +90,7 @@ class MasterLinkGateway:
 
             line = self._tn.read_until(b"login: ", 3)
             if line[-7:] != b"login: ":
-                _LOGGER.debug("Response was: %s" % (line))
+                _LOGGER.debug("Unexpected login prompt: %s" % (line))
                 raise ConnectionError
             self._tn.write(self._password.encode("ascii") + b"\n")
 
@@ -102,10 +102,10 @@ class MasterLinkGateway:
             #                raise ConnectionError
 
             line = self._tn.read_until(
-                b"MLGW >", 3
+                b"MLGW >", 10
             )  # the third line should be the prompt
             if line[-6:] != b"MLGW >":
-                _LOGGER.debug("Password Response was: %s" % (line))
+                _LOGGER.debug("Unexpected CLI prompt: %s" % (line))
                 raise ConnectionError
 
             # Enter the undocumented Masterlink Logging function
@@ -366,16 +366,55 @@ class MasterLinkGateway:
 
                 elif msg_byte == 0x02:  # Source status
                     _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
-                    self._sourceMLN = _getmlnstr(response[4])
-                    self._beolink_source = _getselectedsourcestr(response[5]).upper()
-                    self._sourceMediumPosition = _hexword(response[6], response[7])
-                    self._sourcePosition = _hexword(response[8], response[9])
-                    self._sourceActivity = _getdictstr(
-                        mlgw_sourceactivitydict, response[10]
+                    sourceMLN = _getmlnstr(response[4])
+                    beolink_source = _getselectedsourcestr(response[5]).upper()
+                    sourceMediumPosition = _hexword(response[6], response[7])
+                    sourcePosition = _hexword(response[8], response[9])
+                    sourceActivity = _getdictstr(mlgw_sourceactivitydict, response[10])
+                    pictureFormat = _getdictstr(ml_pictureformatdict, response[11])
+                    decoded = dict()
+                    decoded["payload_type"] = "source_status"
+                    decoded["source_mln"] = sourceMLN
+                    decoded["source"] = beolink_source
+                    decoded["source_medium_position"] = sourceMediumPosition
+                    decoded["source_position"] = sourcePosition
+                    decoded["source_activity"] = sourceActivity
+                    decoded["picture_format"] = pictureFormat
+                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
+                    if sourceActivity == "Playing":
+                        self._beolink_source = beolink_source
+
+                elif msg_byte == 0x03:  # Source status
+                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
+                    decoded = dict()
+                    decoded["payload_type"] = "pict_sound_status"
+                    decoded["source_mln"] = _getmlnstr(response[4])
+                    decoded["sound_status"] = _getdictstr(
+                        mlgw_soundstatusdict, response[5]
                     )
-                    self._pictureFormat = _getdictstr(
-                        ml_pictureformatdict, response[11]
+                    decoded["speaker_mode"] = _getdictstr(
+                        mlgw_speakermodedict, response[6]
                     )
+                    decoded["volume"] = int(response[7])
+                    decoded["screen1_mute"] = _getdictstr(
+                        mlgw_screenmutedict, response[8]
+                    )
+                    decoded["screen1_active"] = _getdictstr(
+                        mlgw_screenactivedict, response[9]
+                    )
+                    decoded["screen2_mute"] = _getdictstr(
+                        mlgw_screenmutedict, response[10]
+                    )
+                    decoded["screen2_active"] = _getdictstr(
+                        mlgw_screenactivedict, response[11]
+                    )
+                    decoded["cinema_mode"] = _getdictstr(
+                        mlgw_cinemamodedict, response[12]
+                    )
+                    decoded["stereo_mode"] = _getdictstr(
+                        mlgw_stereoindicatordict, response[13]
+                    )
+                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
                 elif msg_byte == 0x05:  # All Standby
                     _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")

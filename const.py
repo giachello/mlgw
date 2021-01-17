@@ -42,13 +42,23 @@ ml_command_type_dict = dict(
         (0x0D, "BEO4_KEY"),
         (0x04, "MASTER_PRESENT"),
         (0x5C, "REQUEST_KEY"),
-        (0x30, "WHAT_AUDIO_SOURCE"),
+        (0x30, "WHAT_AUDIO_SOURCE"),  # subtypes seen 02:request 04:response
         (0x40, "CLOCK"),
         (0x44, "TRACK_INFO"),
         (0x82, "TRACK_INFO_LONG"),
         (0x87, "STATUS_INFO"),
         (0x94, "DVD_STATUS_INFO"),
         (0x20, "MLGW_REMOTE_BEO4"),
+        # more packets that we see on the bus, with a guess of the type
+        (
+            0x06,
+            "DISPLAY_SOURCE",
+        ),  # Message sent with a payload showing the displayed source name. subtype 3 has the printable source name starting at byte 10 of teh payload
+        (
+            0x0D,
+            "EXTENDED_SOURCE_INFORMATION",
+        ),  # message sent with 6 subtypes showing information about the source. printable info at byte 14 of the payload subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
+        (0x98, "PICTURE_STATUS_INFO"),
     ]
 )
 
@@ -122,7 +132,7 @@ ml_selectedsourcedict = dict(
         (0x97, "A_AUX"),
         (0xA1, "N.RADIO"),
         #  Dummy for 'Listen for all sources'
-        (0xFE, "<ALL>"),
+        (0xFE, "<ALL>"),  # have also seen 0xFF as "all"
     ]
 )
 
@@ -266,6 +276,8 @@ mlgw_sourceactivitydict = dict(
 
 ### for '0x03: Picture and Sound Status'
 mlgw_soundstatusdict = dict([(0x00, "Not muted"), (0x01, "Muted")])
+
+reverse_mlgw_soundstatusdict = {v.upper(): k for k, v in mlgw_soundstatusdict.items()}
 
 mlgw_speakermodedict = dict(
     [
