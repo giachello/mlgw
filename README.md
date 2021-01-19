@@ -127,7 +127,9 @@ The enhanced Undocumented Feature forwards *ALL* MasterLink events that happen o
 * use the number buttons to select different 'streaming radios' through the ['netradio'](https://github.com/giachello/netradio) plugin.
 * use the up, down, wind, rewind buttons to switch Spotify playlists or move to the next song in the playlist.
 
-The possibilities are endless. You can see a few examples here: [https://github.com/giachello/mlgw/blob/main/example_automations.yaml](example_automations.yaml). 
+The possibilities are endless. You can see a few examples here: [https://github.com/giachello/mlgw/blob/main/example_automations.yaml](example_automations.yaml). An easy way to see what goes on the ML bus is using the "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.ML_telegram` in the field on the bottom of the page.
+
+For example the following setup catches a key event on the Beo4 remote.
 
 ![BEO4 key event](./beo4_key_event.png)
 
