@@ -1,0 +1,169 @@
+#
+# Example automations. You cannot use this file as is, you need to code them into your Configuration->Automations UI.
+#
+- alias: MLGW Yellow on A.MEM
+  description: Start playing Radio ID 0 on the netradio component.
+  trigger:
+  - platform: event
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: Yellow
+    event_type: mlgw.ML_telegram
+  condition: []
+  action:
+  - service: netradio.start_radio
+    data:
+      radio_index: 0
+      entity_id: media_player.bang_olufsen
+  mode: single
+- alias: Green on MLGW A.MEM
+  description: 'Switch on Spotify when I press the green button on the Beo4 remote.
+    Requires the ''spotcast'' script from: https://github.com/fondberg/spotcast'
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: Green
+  condition: []
+  action:
+  - service: script.start_playing_spotify
+    data: {}
+  mode: single
+- alias: MLGW Stop Streaming
+  description: Stop playing on the Chromecast device called 'bang_olufsen'
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: Stop
+  condition: []
+  action:
+  - service: media_player.media_pause
+    data: {}
+    entity_id: media_player.bang_olufsen
+  mode: single
+- alias: MLGW ALL STANDBY
+  description: turn off chromecast on Bang and olufsen when All Standby command happens
+  trigger:
+  - platform: event
+    event_type: mlgw.MLGW_telegram
+    event_data:
+      payload_type: all_standby
+  condition: []
+  action:
+  - service: media_player.media_stop
+    data: {}
+    entity_id: media_player.bang_olufsen
+  mode: single
+- alias: MLGW Step Up on A.MEM
+  description: next radio when playing
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: STEP_UP
+  condition:
+  - condition: state
+    entity_id: media_player.bang_olufsen
+    state: Default Media Receiver
+    attribute: app_name
+  action:
+  - service: netradio.next_radio
+    data:
+      entity_id: media_player.bang_olufsen
+  mode: single
+- alias: MLGW Step Down on A.MEM
+  description: Switch to previous radio playing on the netradio component.
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: STEP_DOWN
+  condition:
+  - condition: state
+    entity_id: media_player.bang_olufsen
+    state: Default Media Receiver
+    attribute: app_name
+  action:
+  - service: netradio.prev_radio
+    data:
+      entity_id: media_player.bang_olufsen
+  mode: single
+- alias: MLGW Wind on A.MEM
+  description: Go to next track on Spotify.
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: WIND
+  condition:
+  - condition: state
+    entity_id: media_player.bang_olufsen
+    state: Spotify
+    attribute: app_name
+  action:
+  - service: media_player.media_next_track
+    data: {}
+    entity_id: media_player.bang_olufsen
+  mode: single
+- alias: MLGW Digit-0 on A.MEM
+  description: Switch to Radio ID 0 (the first radio) on the netradio component.
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      payload:
+        source: A.MEM
+        command: Digit-0
+  condition:
+  - condition: state
+    entity_id: media_player.bang_olufsen
+    state: Default Media Receiver
+    attribute: app_name
+  action:
+  - service: netradio.start_radio
+    data:
+      entity_id: media_player.bang_olufsen
+      radio_index: 0
+  mode: single
+- alias: Blue on MLGW Radio in bathroom
+  description: Switch on the bedroom speaker and off the bathroom speaker for when
+    I exit the bathroom and go to the bedroom
+  trigger:
+  - platform: event
+    event_type: mlgw.ML_telegram
+    event_data:
+      payload_type: BEO4_KEY
+      from_mln: 7
+      payload:
+        source: RADIO
+        command: Blue
+  condition: []
+  action:
+  - service: media_player.select_source
+    data:
+      source: RADIO
+    entity_id: media_player.bedroom
+  - delay: '1'
+  - service: media_player.turn_off
+    data: {}
+    entity_id: media_player.bathroom
+  mode: single
