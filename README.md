@@ -97,29 +97,37 @@ The integration also forwards events to Home Assistant that you can use for your
 
 ### MasterLink Gateway official commands: Lights and Virtual Buttons
 
-* The vanilla MasterLink Gateway Protocol only forwards: Virtual Buttons, Light commands, Control commands, and "All Standby" commands. The component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to Virtual Button and Light events fired by the platform. 
+The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light commands, Control commands, Picture and Sound Status, Source Status, and "All Standby". 
+
+The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to the bus. An easy way to see what's getting fired is to use the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page.
 
 For example, if the user selects LIGHT-1 on their Beo4 or BeoOne remote control, the command will flow through as an Event to Home assistant which you can use to control your lights.
 
-For example, this Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
+The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
 
 
 ![All Standby Event](./all_standby_event.png)
 
-There are only 3 events fired by the official integration:
+There are 5 events fired by the official integration:
 
 | Event | Payload Type | Arguments |
 | ----- | ------------ | --------- |
 | mlgw.MLGW_telegram | all_standby | *none* |
 | mlgw.MLGW_telegram | virtual_button | button: button number, action: (PRESS,RELEASE,HOLD) |
 | mlgw.MLGW_telegram | light_control_event | room: room number, type: (CONTROL or LIGHT), command: the BEO4 key pressed after "LIGHT" |
+| mlgw.MLGW_telegram | source_status | source_mln: device causing the event, source: the active Source (RADIO, CD, etc.), source_medium_position, source_position, source_activity: (Playing, Standby, etc.), picture_format are all information related to the specific source  |
+| mlgw.MLGW_telegram | light_control_event | source_mln: device causing the event, sound_status, speaker_mode, volume, screen1_mute, screen1_active, screen2_mute, screen2_active, cinema_mode, stereo_mode |
 
 
 ### Undocumented enhanced functionality
 
-* The enhanced Undocumented Feature also forwards *ALL* MasterLink events that happen on the bus so you can use them to drive much more interesting behavior. 
+The enhanced Undocumented Feature forwards *ALL* MasterLink events that happen on the bus so you can use them to drive much more interesting behavior. For example, you could:
+* start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the button that typically activates the Aux input on the B&O equipment where you can connect a streaming devices like a Chromecast Audio). 
+* use the "Blue" button to turn off a speaker and turn on another one when moving within the house
+* use the number buttons to select different 'streaming radios' through the ['netradio'](https://github.com/giachello/netradio) plugin.
+* use the up, down, wind, rewind buttons to switch Spotify playlists or move to the next song in the playlist.
 
-For example, you can start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the button that typically activates the Aux input on the B&O equipment where you can connect a streaming devices like a Chromecast Audio).
+The possibilities are endless. You can see a few examples here: [https://github.com/giachello/mlgw/blob/main/example_automations.yaml](example_automations.yaml). 
 
 ![BEO4 key event](./beo4_key_event.png)
 
@@ -128,7 +136,7 @@ Another example is to stop playback when the "Stop" button is pressed on the rem
 ![stop event](./stop_event.png)
 
 
-A full list of BEO4 Key commands is available starting at line 122 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
+A full list of BEO4 Keys is available starting at line 122 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
 
 There are too many ML telegram types to document here (and a lot are undocumented publicly), but a few particularly useful ones are listed below (see const.py and gateway.py for more information).
 
