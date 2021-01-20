@@ -31,34 +31,50 @@ CONF_MLGW_USE_MLLOG = "use_mllog"
 # ########################################################################################
 # ##### MasterLink (not MLGW)  Protocol packet constants
 
+ml_telegram_type_dict = dict(
+    [
+        (0x0A, "COMMAND"),
+        (0x0B, "REQUEST"),
+        (0x14, "STATUS"),
+        (0x2C, "INFO"),
+        (0x40, "TIME"),
+        (0x3C, "TIMER"),
+        (0x5E, "CONFIG"),
+    ]
+)
+
 ml_command_type_dict = dict(
     [
-        (0x45, "GOTO_SOURCE"),
-        (0x6C, "DISTRIBUTION_REQUEST"),
-        (0x96, "PC_PRESENT"),
+        (0x04, "MASTER_PRESENT"),
+        (0x06, "DISPLAY_SOURCE"),
+        (0x08, "AUDIO_BUS"),  # subtypes seen 01:request status 04:status_distributing 06:status_not_distributing (len 04 or 05)
+        (0x0B, "META_DATA"),
+        (0x0D, "BEO4_KEY"),
         (0x10, "STANDBY"),
         (0x11, "RELEASE"),
-        (0x3C, "TIMER"),
-        (0x0D, "BEO4_KEY"),
-        (0x04, "MASTER_PRESENT"),
-        (0x5C, "REQUEST_KEY"),
+        (0x20, "MLGW_REMOTE_BEO4"),
         (0x30, "WHAT_AUDIO_SOURCE"),  # subtypes seen 02:request 04:response
+        (0x3C, "TIMER"),
         (0x40, "CLOCK"),
         (0x44, "TRACK_INFO"),
+        (0x45, "GOTO_SOURCE"),
+        (0x5C, "REQUEST_KEY"),
+        (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
         (0x87, "STATUS_INFO"),
         (0x94, "DVD_STATUS_INFO"),
-        (0x20, "MLGW_REMOTE_BEO4"),
-        # more packets that we see on the bus, with a guess of the type
-        (
-            0x06,
-            "DISPLAY_SOURCE",
-        ),  # Message sent with a payload showing the displayed source name. subtype 3 has the printable source name starting at byte 10 of teh payload
-        (
-            0x0B,
-            "EXTENDED_SOURCE_INFORMATION",
-        ),  # message sent with 6 subtypes showing information about the source. printable info at byte 14 of the payload subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
+        (0x96, "PC_PRESENT"),
         (0x98, "PICTURE_STATUS_INFO"),
+        # more packets that we see on the bus, with a guess of the type
+        #(
+        #    0x06,
+        #    "DISPLAY_SOURCE",
+        #),  # Message sent with a payload showing the displayed source name. subtype 3 has the printable source name starting at byte 10 of teh payload
+        #(
+        #    0x0B,
+        #    "EXTENDED_SOURCE_INFORMATION",
+        #),  # message sent with 6 subtypes showing information about the source. printable info at byte 14 of the payload subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
+        #(0x98, "PICTURE_STATUS_INFO"),
     ]
 )
 
