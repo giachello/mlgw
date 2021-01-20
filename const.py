@@ -38,7 +38,6 @@ ml_telegram_type_dict = dict(
         (0x14, "STATUS"),
         (0x2C, "INFO"),
         (0x40, "TIME"),
-        (0x3C, "TIMER"),
         (0x5E, "CONFIG"),
     ]
 )
