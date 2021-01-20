@@ -55,7 +55,7 @@ ml_command_type_dict = dict(
             "DISPLAY_SOURCE",
         ),  # Message sent with a payload showing the displayed source name. subtype 3 has the printable source name starting at byte 10 of teh payload
         (
-            0x0D,
+            0x0B,
             "EXTENDED_SOURCE_INFORMATION",
         ),  # message sent with 6 subtypes showing information about the source. printable info at byte 14 of the payload subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
         (0x98, "PICTURE_STATUS_INFO"),
