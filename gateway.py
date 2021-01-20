@@ -19,6 +19,7 @@ from .const import (
     ml_destselectordict,
     ml_pictureformatdict,
     ml_state_dict,
+    ml_telegram_type_dict
     ml_command_type_dict,
     mlgw_payloadtypedict,
     mlgw_virtualactiondict,
@@ -536,7 +537,7 @@ def decode_ml_to_string(telegram):
         + " => "
         + decode_device(telegram[0])
         + " TYPE: "
-        + str(telegram[3])
+        + _dictsanitize(ml_telegram_type_dict, telegram[3])
         + " SRC_DEST:"
         + _hexbyte(telegram[4])
         + " ORIG_SRC:"
@@ -667,7 +668,7 @@ def decode_ml_to_dict(telegram):
     decoded = dict()
     decoded["from_device"] = decode_device(telegram[1])
     decoded["to_device"] = decode_device(telegram[0])
-    decoded["type"] = str(telegram[3])
+    decoded["type"] = _dictsanitize(ml_telegram_type_dict, telegram[3])
     decoded["src_dest"] = _dictsanitize(ml_selectedsourcedict, telegram[4])
     decoded["orig_src"] = _dictsanitize(ml_selectedsourcedict, telegram[5])
     decoded["payload_type"] = _dictsanitize(ml_command_type_dict, telegram[7])
