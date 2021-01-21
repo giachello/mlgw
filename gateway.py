@@ -649,7 +649,7 @@ def decode_device(d):
     if d == 0xC1:
         return "AUDIO_MASTER"
     if d == 0xC2:
-        return "SLAVE_DEVICE"
+        return "SOURCE_CENTER"
     if d == 0x83:
         return "ALL_LINK_DEVICES"
     if d == 0x80:
