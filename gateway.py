@@ -19,7 +19,7 @@ from .const import (
     ml_destselectordict,
     ml_pictureformatdict,
     ml_state_dict,
-    ml_telegram_type_dict
+    ml_telegram_type_dict,
     ml_command_type_dict,
     mlgw_payloadtypedict,
     mlgw_virtualactiondict,
