@@ -100,10 +100,16 @@ class MasterLinkGateway:
             #            if line[-9:] != b"Logged in":
             #                _LOGGER.debug("Password Response was: %s" % (line))
             #                raise ConnectionError
+            attempts = 0
+            max_attempts = 5
+            while attempts < max_attempts:
+                line = self._tn.read_until(
+                    b"MLGW >", 5
+                )  # the third line should be the prompt
+                attempts = attempts + 1
+                if line[-6:] == b"MLGW >":
+                    break
 
-            line = self._tn.read_until(
-                b"MLGW >", 10
-            )  # the third line should be the prompt
             if line[-6:] != b"MLGW >":
                 _LOGGER.debug("Unexpected CLI prompt: %s" % (line))
                 raise ConnectionError
@@ -384,7 +390,7 @@ class MasterLinkGateway:
                     if sourceActivity == "Playing":
                         self._beolink_source = beolink_source
 
-                elif msg_byte == 0x03:  # Source status
+                elif msg_byte == 0x03:  # Picture and Sound status
                     _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     decoded = dict()
                     decoded["payload_type"] = "pict_sound_status"
