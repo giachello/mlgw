@@ -146,7 +146,7 @@ class BeoSpeaker(MediaPlayerEntity):
         self._room = room
         self._gateway = gateway
         self._pwon = False
-        self._source = self._gateway.beolink_source
+        self._source = self._gateway.default_source
         self._stop_listening = None
 
         # Send a dummy command to the device. If the ML_LOG system is operating, then a ML telegram
@@ -174,10 +174,15 @@ class BeoSpeaker(MediaPlayerEntity):
                             "ML LOG said: GOTO_SOURCE %s on device %s"
                             % (_event.data["payload"]["source"], self._ml)
                         )
+                        # reflect that the device is on and store the requested source
                         self._pwon = True
-                        self._source = (
-                            self._gateway.beolink_source
-                        )  # retrive source from gateway
+                        self._source = _event.data["payload"]["source"]
+                if _event.data["to_device"] == self._ml:
+                    if (  # I'm being told to change source
+                        _event.data["payload_type"] == "TRACK_INFO"
+                        and _event.data["payload"]["subtype"] == "Change Source"
+                    ):
+                        self._source = _event.data["payload"]["source"]
 
         if self._gateway._connectedML:
             self._stop_listening = gateway._hass.bus.async_listen(
@@ -208,7 +213,8 @@ class BeoSpeaker(MediaPlayerEntity):
     @property
     def source(self):
         # Name of the current input source. Because the source is common across all the speakers connected to the gateway, we just pass through the beolink.
-        self._source = self._gateway.beolink_source
+        # this breaks when there are devices with local sources and we need to fix it.
+        #        self._source = self._gateway.beolink_source
         return self._source
 
     @property

@@ -62,6 +62,7 @@ class MasterLinkGateway:
         self._connectedMLGW = False
         self.stopped = threading.Event()
         # to manage the sources and devices
+        self._default_source = default_source
         self._beolink_source = default_source
         self._available_sources = available_sources
         self._devices = None
@@ -76,6 +77,10 @@ class MasterLinkGateway:
     @property
     def beolink_source(self):
         return self._beolink_source
+
+    @property
+    def default_source(self):
+        return self._default_source
 
     @property
     def available_sources(self):
@@ -109,6 +114,7 @@ class MasterLinkGateway:
                 attempts = attempts + 1
                 if line[-6:] == b"MLGW >":
                     break
+                time.sleep(0.5)
 
             if line[-6:] != b"MLGW >":
                 _LOGGER.debug("Unexpected CLI prompt: %s" % (line))
@@ -243,7 +249,7 @@ class MasterLinkGateway:
 
     ## Login
     def mlgw_login(self):
-        _LOGGER.info("Trying to login")
+        _LOGGER.info("mlgw: Trying to login")
         if self._connectedMLGW:
             wrkstr = self._user + chr(0x00) + self._password
             payload = bytearray()
@@ -252,7 +258,7 @@ class MasterLinkGateway:
             self.mlgw_send(0x30, payload)  # login Request
 
     def mlgw_ping(self):
-        _LOGGER.debug("ping")
+        #        _LOGGER.debug("ping")
         self.mlgw_send(0x36, "")
 
     ## Close connection to mlgw
@@ -361,17 +367,21 @@ class MasterLinkGateway:
 
                 elif msg_byte == 0x31:  # Login Status
                     if msg_payload == "FAIL":
-                        _LOGGER.info("mlgw: Login needed")
+                        _LOGGER.warning(
+                            "mlgw: MLGW protocol Password required to %s", self._host
+                        )
                         self.mlgw_login()
                     elif msg_payload == "OK":
-                        _LOGGER.info("mlgw: Login successful")
+                        _LOGGER.warning(
+                            "mlgw: MLGW protocol Login successful to %s", self._host
+                        )
                         self.mlgw_get_serial()
 
-                elif msg_byte == 0x37:  # Pong (Ping response)
-                    _LOGGER.debug("mlgw: pong")
+                #                elif msg_byte == 0x37:  # Pong (Ping response)
+                #                    _LOGGER.debug("mlgw: pong")
 
                 elif msg_byte == 0x02:  # Source status
-                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
+                    #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     sourceMLN = _getmlnstr(response[4])
                     beolink_source = _getselectedsourcestr(response[5]).upper()
                     sourceMediumPosition = _hexword(response[6], response[7])
@@ -389,12 +399,19 @@ class MasterLinkGateway:
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
                     if sourceActivity == "Playing":
                         self._beolink_source = beolink_source
+                    # change the source of the MLN
+                    # reporting the change
+                    if sourceActivity == "Playing" and self._devices is not None:
+                        for x in self._devices:
+                            if x._mln == sourceMLN:
+                                x._source = beolink_source
 
                 elif msg_byte == 0x03:  # Picture and Sound status
-                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
+                    #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     decoded = dict()
                     decoded["payload_type"] = "pict_sound_status"
-                    decoded["source_mln"] = _getmlnstr(response[4])
+                    sourceMLN = _getmlnstr(response[4])
+                    decoded["source_mln"] = sourceMLN
                     decoded["sound_status"] = _getdictstr(
                         mlgw_soundstatusdict, response[5]
                     )
@@ -421,9 +438,16 @@ class MasterLinkGateway:
                         mlgw_stereoindicatordict, response[13]
                     )
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
+                    # if the device picture status is on, then turn on the state in the media_player
+                    if self._devices is not None and (
+                        response[9] == 0x01 or response[11] == 0x01
+                    ):
+                        for x in self._devices:
+                            if x._mln == sourceMLN:
+                                x.set_state(STATE_ON)
 
                 elif msg_byte == 0x05:  # All Standby
-                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
+                    #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     if self._devices is not None:
                         # set all connected devices state to off
                         for i in self._devices:
@@ -436,18 +460,16 @@ class MasterLinkGateway:
                     lcroom = _getroomstr(response[4])
                     lctype = _getdictstr(mlgw_lctypedict, response[5])
                     lccommand = _getbeo4commandstr(response[6])
-                    _LOGGER.info(
-                        f"mlgw: Light/Control command: room: {lcroom} type: {lctype} command {lccommand}"
-                    )
+                    #                    _LOGGER.info(f"mlgw: L/C command: room: {lcroom} type: {lctype} command: {lccommand}")
                     decoded = dict()
                     decoded["payload_type"] = "light_control_event"
-                    decoded["room"] = response[4]
+                    decoded["room"] = lcroom
                     decoded["type"] = lctype
                     decoded["command"] = lccommand
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
-                else:
-                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
+        #                else:
+        #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
 
         self.mlgw_close()
 
@@ -635,9 +657,11 @@ def decode_ml_to_string(telegram):
             decoded = decoded + " Undefined"
     # what audio source
     if telegram[7] == 0x30:
-        if telegram[8] == 0x0:
+        if telegram[9] == 0x02:
             decoded = decoded + " Request Audio Source"
-        elif telegram[8] == 0x02:
+        elif telegram[9] == 0x04:
+            decoded = decoded + " No Audio Source"
+        elif telegram[9] == 0x06:
             decoded = (
                 decoded
                 + " Audio Source: "
@@ -680,14 +704,14 @@ def decode_ml_to_dict(telegram):
     decoded["payload_len"] = str(telegram[8])
     decoded["payload"] = dict()
 
-    # status info
+    # source status info
     if telegram[7] == 0x87:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
-        decoded["payload"]["channel_track"] = str(telegram[19])
+        decoded["payload"]["channel_track"] = str(_hexword(telegram[18], telegram[19]))
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[21])
-        decoded["payload"]["source_medium"] = str(_hexword(telegram[18], telegram[17]))
+        decoded["payload"]["source_medium"] = str(telegram[17])
         decoded["payload"]["picture_identifier"] = _dictsanitize(
             ml_pictureformatdict, telegram[23]
         )
@@ -697,14 +721,21 @@ def decode_ml_to_dict(telegram):
             ml_selectedsourcedict, telegram[10]
         )
         decoded["payload"]["command"] = _dictsanitize(beo4_commanddict, telegram[11])
-    # track info long
+    # audio track info long
     if telegram[7] == 0x82:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[11]
         )
         decoded["payload"]["channel_track"] = str(telegram[12])
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[13])
-    # track info
+    # video track info long
+    if telegram[7] == 0x94:
+        decoded["payload"]["source"] = _dictsanitize(
+            ml_selectedsourcedict, telegram[13]
+        )
+        decoded["payload"]["channel_track"] = str(_hexword(telegram[11], telegram[12]))
+        decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[14])
+    # track change info
     if telegram[7] == 0x44:
         if telegram[9] == 0x07:
             decoded["payload"]["subtype"] = "Change Source"
@@ -745,9 +776,11 @@ def decode_ml_to_dict(telegram):
             decoded["payload"]["subtype"] = "Undefined"
     # what audio source
     if telegram[7] == 0x30:
-        if telegram[8] == 0x0:
+        if telegram[9] == 0x02:
             decoded["payload"]["subtype"] = "Request Audio Source"
-        elif telegram[8] == 0x02:
+        elif telegram[9] == 0x04:
+            decoded["payload"]["subtype"] = "No Audio Source"
+        elif telegram[9] == 0x06:
             decoded["payload"]["subtype"] = "Audio Source"
             decoded["payload"]["source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[11]
@@ -845,20 +878,14 @@ def _getpayloadstr(message):
             resultstr = resultstr + " " + _getdictstr(mlgw_soundstatusdict, message[5])
         resultstr = resultstr + " " + _getdictstr(mlgw_speakermodedict, message[6])
         resultstr = resultstr + " Vol=" + str(message[7])
-        if message[9] != 0x00:
-            resultstr = (
-                resultstr + " Scrn:" + _getdictstr(mlgw_screenmutedict, message[8])
-            )
-        if message[11] != 0x00:
-            resultstr = (
-                resultstr + " Scrn2:" + _getdictstr(mlgw_screenmutedict, message[10])
-            )
-        if message[12] != 0x00:
-            resultstr = resultstr + " " + _getdictstr(mlgw_cinemamodedict, message[12])
-        if message[13] != 0x01:
-            resultstr = (
-                resultstr + " " + _getdictstr(mlgw_stereoindicatordict, message[13])
-            )
+        resultstr = resultstr + " Scrn1:" + _getdictstr(mlgw_screenmutedict, message[8])
+        resultstr = resultstr + _getdictstr(mlgw_screenactivedict, message[9])
+        resultstr = (
+            resultstr + " Scrn2:" + _getdictstr(mlgw_screenmutedict, message[10])
+        )
+        resultstr = resultstr + _getdictstr(mlgw_screenactivedict, message[11])
+        resultstr = resultstr + " " + _getdictstr(mlgw_cinemamodedict, message[12])
+        resultstr = resultstr + " " + _getdictstr(mlgw_stereoindicatordict, message[13])
 
     elif message[1] == 0x04:  # Light and Control command
         resultstr = (

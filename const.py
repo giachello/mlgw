@@ -31,33 +31,48 @@ CONF_MLGW_USE_MLLOG = "use_mllog"
 # ########################################################################################
 # ##### MasterLink (not MLGW)  Protocol packet constants
 
+
+ml_telegram_type_dict = dict(
+    [
+        (0x0A, "COMMAND"),
+        (0x0B, "REQUEST"),
+        (0x14, "RESPONSE"),
+        (0x2C, "INFO"),
+    ]
+)
+
 ml_command_type_dict = dict(
     [
         (0x45, "GOTO_SOURCE"),
         (0x6C, "DISTRIBUTION_REQUEST"),
-        (0x96, "PC_PRESENT"),
         (0x10, "STANDBY"),
         (0x11, "RELEASE"),
         (0x3C, "TIMER"),
         (0x0D, "BEO4_KEY"),
         (0x04, "MASTER_PRESENT"),
-        (0x5C, "REQUEST_KEY"),
-        (0x30, "WHAT_AUDIO_SOURCE"),  # subtypes seen 02:request 04:response
+        # Lock to Determine what device issues source commands
+        # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
+        (0x5C, "LOCK_MANAGER_COMMAND"),
+        # Seen when a device asks what the current source is
+        # subtypes seen 02:request 04:no source 06:has source
+        (0x30, "WHAT_AUDIO_SOURCE"),
+        # subtypes seen 01:request 04:no source 06:has source (byte 13 is source)
+        (0x08, "UNKNOWN_SOURCE_REQUEST"),
         (0x40, "CLOCK"),
         (0x44, "TRACK_INFO"),
         (0x82, "TRACK_INFO_LONG"),
         (0x87, "STATUS_INFO"),
-        (0x94, "DVD_STATUS_INFO"),
+        (0x94, "VIDEO_TRACK_INFO"),
         (0x20, "MLGW_REMOTE_BEO4"),
         # more packets that we see on the bus, with a guess of the type
-        (
-            0x06,
-            "DISPLAY_SOURCE",
-        ),  # Message sent with a payload showing the displayed source name. subtype 3 has the printable source name starting at byte 10 of teh payload
-        (
-            0x0B,
-            "EXTENDED_SOURCE_INFORMATION",
-        ),  # message sent with 6 subtypes showing information about the source. printable info at byte 14 of the payload subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
+        # Message sent with a payload showing the displayed source name.
+        # subtype 3 has the printable source name starting at byte 10 of the payload
+        (0x06, "DISPLAY_SOURCE"),
+        # message sent with 6 subtypes showing information about the source.
+        # Printable info at byte 14 of the payload
+        # subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
+        (0x0B, "EXTENDED_SOURCE_INFORMATION"),
+        (0x96, "PC_PRESENT"),
         (0x98, "PICTURE_STATUS_INFO"),
     ]
 )
@@ -66,6 +81,7 @@ ml_command_type_request_key_subtype_dict = dict(
     [
         (0x01, "Request Key"),
         (0x02, "Transfer Key"),
+        (0x03, "Transfer Impossible"),
         (0x04, "Key Received"),
         (0xFF, "Undefined"),
     ]
@@ -73,20 +89,22 @@ ml_command_type_request_key_subtype_dict = dict(
 
 ml_state_dict = dict(
     [
-        (0x00, "UNKNOWN"),
-        (0x01, "STOP"),
-        (0x02, "PLAYING"),
-        (0x03, "FASTFORWARD"),
-        (0x04, "REWIND"),
-        (0x05, "RECORD_LOCK"),
-        (0x06, "STANDBY"),
-        (0x07, "LOAD"),
-        (0x08, "STIL_PICTURE"),
-        (0x14, "SCAN_FORWARD"),
-        (0x15, "SCAN_REVERSE"),
-        (0xFF, "BLANK_STATUS"),
+        (0x00, "Unknown"),
+        (0x01, "Stop"),
+        (0x02, "Playing"),
+        (0x03, "Fast Forward"),
+        (0x04, "Rewind"),
+        (0x05, "Record Lock"),
+        (0x06, "Standby"),
+        (0x07, "Load / No Media"),
+        (0x08, "Still Picture"),
+        (0x14, "Scan Forward"),
+        (0x15, "Scan Reverse"),
+        (0xFF, "Blank Status"),
     ]
 )
+
+mlgw_sourceactivitydict = ml_state_dict
 
 ml_pictureformatdict = dict(
     [
@@ -261,18 +279,6 @@ MLGW_PL = {v.upper(): k for k, v in mlgw_payloadtypedict.items()}
 
 
 mlgw_virtualactiondict = dict([(0x01, "PRESS"), (0x02, "HOLD"), (0x03, "RELEASE")])
-
-mlgw_sourceactivitydict = dict(
-    [
-        (0x00, "Unknown"),
-        (0x01, "Stop"),
-        (0x02, "Playing"),
-        (0x03, "Wind"),
-        (0x04, "Rewind"),
-        (0x05, "Record lock"),
-        (0x06, "Standby"),
-    ]
-)
 
 ### for '0x03: Picture and Sound Status'
 mlgw_soundstatusdict = dict([(0x00, "Not muted"), (0x01, "Muted")])
