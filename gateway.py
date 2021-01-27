@@ -382,7 +382,7 @@ class MasterLinkGateway:
 
                 elif msg_byte == 0x02:  # Source status
                     #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
-                    sourceMLN = _getmlnstr(response[4])
+                    sourceMLN = response[4]
                     beolink_source = _getselectedsourcestr(response[5]).upper()
                     sourceMediumPosition = _hexword(response[6], response[7])
                     sourcePosition = _hexword(response[8], response[9])
@@ -397,11 +397,11 @@ class MasterLinkGateway:
                     decoded["source_activity"] = sourceActivity
                     decoded["picture_format"] = pictureFormat
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
-                    if sourceActivity == "Playing":
+                    if sourceActivity != "Standby":
                         self._beolink_source = beolink_source
                     # change the source of the MLN
                     # reporting the change
-                    if sourceActivity == "Playing" and self._devices is not None:
+                    if sourceActivity != "Standby" and self._devices is not None:
                         for x in self._devices:
                             if x._mln == sourceMLN:
                                 x._source = beolink_source
@@ -410,7 +410,7 @@ class MasterLinkGateway:
                     #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     decoded = dict()
                     decoded["payload_type"] = "pict_sound_status"
-                    sourceMLN = _getmlnstr(response[4])
+                    sourceMLN = response[4]
                     decoded["source_mln"] = sourceMLN
                     decoded["sound_status"] = _getdictstr(
                         mlgw_soundstatusdict, response[5]
@@ -879,11 +879,11 @@ def _getpayloadstr(message):
         resultstr = resultstr + " " + _getdictstr(mlgw_speakermodedict, message[6])
         resultstr = resultstr + " Vol=" + str(message[7])
         resultstr = resultstr + " Scrn1:" + _getdictstr(mlgw_screenmutedict, message[8])
-        resultstr = resultstr + _getdictstr(mlgw_screenactivedict, message[9])
+        resultstr = resultstr + ", " + _getdictstr(mlgw_screenactivedict, message[9])
         resultstr = (
             resultstr + " Scrn2:" + _getdictstr(mlgw_screenmutedict, message[10])
         )
-        resultstr = resultstr + _getdictstr(mlgw_screenactivedict, message[11])
+        resultstr = resultstr + ", " + _getdictstr(mlgw_screenactivedict, message[11])
         resultstr = resultstr + " " + _getdictstr(mlgw_cinemamodedict, message[12])
         resultstr = resultstr + " " + _getdictstr(mlgw_stereoindicatordict, message[13])
 
