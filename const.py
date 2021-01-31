@@ -1,4 +1,17 @@
-"""Constants for the MasterLink Gateway integration."""
+"""Constants for the MasterLink Gateway integration.
+
+Key references:
+
+http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/
+https://tidsskrift.dk/daimipb/article/download/7043/6004/0
+
+
+Thanks to https://github.com/Lele-72 for discovering a lot of the more arcane commands!
+
+
+
+
+"""
 
 DOMAIN = "mlgw"
 MLGW_GATEWAY = "MLGW_GATEWAY"
@@ -43,32 +56,37 @@ ml_telegram_type_dict = dict(
 
 ml_command_type_dict = dict(
     [
-        (0x45, "GOTO_SOURCE"),
-        (0x6C, "DISTRIBUTION_REQUEST"),
-        (0x10, "STANDBY"),
-        (0x11, "RELEASE"),
-        (0x3C, "TIMER"),
-        (0x0D, "BEO4_KEY"),
         (0x04, "MASTER_PRESENT"),
-        # Lock to Determine what device issues source commands
-        # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
-        (0x5C, "LOCK_MANAGER_COMMAND"),
-        # Seen when a device asks what the current source is
-        # subtypes seen 02:request 04:no source 06:has source
-        (0x30, "WHAT_AUDIO_SOURCE"),
+        # REQUEST_DISTRIBUTED_SOURCE: seen when a device asks what source is being distributed
         # subtypes seen 01:request 04:no source 06:has source (byte 13 is source)
-        (0x08, "UNKNOWN_SOURCE_REQUEST"),
+        (0x08, "REQUEST_DISTRIBUTED_SOURCE"),
+        (0x0D, "BEO4_KEY"),
+        (0x10, "STANDBY"),
+        (0x11, "RELEASE"),  # when a device turns off
+        (0x20, "MLGW_REMOTE_BEO4"),
+        # REQUEST_LOCAL_SOURCE: Seen when a device asks what source is playing locally to a device
+        # subtypes seen 02:request 04:no source 06:has source (byte 11 is source)
+        (0x30, "REQUEST_LOCAL_SOURCE"),
+        (0x3C, "TIMER"),
         (0x40, "CLOCK"),
         (0x44, "TRACK_INFO"),
+        # LOCK_MANAGER_COMMAND: Lock to Determine what device issues source commands
+        # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
+        (0x45, "GOTO_SOURCE"),
+        (0x5C, "LOCK_MANAGER_COMMAND"),
+        (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
         (0x87, "STATUS_INFO"),
         (0x94, "VIDEO_TRACK_INFO"),
-        (0x20, "MLGW_REMOTE_BEO4"),
-        # more packets that we see on the bus, with a guess of the type
-        # Message sent with a payload showing the displayed source name.
+        #
+        # -----------------------------------------------------------------------
+        # More packets that we see on the bus, with a guess of the type
+        # DISPLAY_SOURCE: Message sent with a payload showing the displayed source name.
         # subtype 3 has the printable source name starting at byte 10 of the payload
         (0x06, "DISPLAY_SOURCE"),
-        # message sent with 6 subtypes showing information about the source.
+        # START_DISTRIBUTION: Sent when a locally playing source starts being distributed
+        (0x07, "START_DISTRIBUTION"),
+        # EXTENDED_SOURCE_INFORMATION: message with 6 subtypes showing information about the source.
         # Printable info at byte 14 of the payload
         # subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
         (0x0B, "EXTENDED_SOURCE_INFORMATION"),
@@ -83,6 +101,7 @@ ml_command_type_request_key_subtype_dict = dict(
         (0x02, "Transfer Key"),
         (0x03, "Transfer Impossible"),
         (0x04, "Key Received"),
+        (0x05, "Timeout"),
         (0xFF, "Undefined"),
     ]
 )
@@ -165,20 +184,26 @@ beo4_commanddict = dict(
         (0x81, "Radio"),
         (0x82, "DTV2"),
         (0x83, "Aux_A"),
+        (0x84, "Media"),
         (0x85, "V.Mem"),
         (0x86, "DVD"),
         (0x87, "Camera"),
         (0x88, "Text"),
         (0x8A, "DTV"),
         (0x8B, "PC"),
-        (0x0D, "Doorcam"),
+        (0x8C, "WEB"),
+        (0x8D, "Doorcam"),
+        (0x8E, "Photo"),
+        (0x90, "USB2"),
         (0x91, "A.Mem"),
         (0x92, "CD"),
         (0x93, "N.Radio"),
         (0x94, "N.Music"),
-        (0x97, "CD2"),
+        (0x95, "Server"),
+        (0x97, "CD2 / JOIN"),
         (0x96, "Spotify"),
         (0xBF, "AV"),
+        (0xFA, "P-IN-P"),
         # Digits:
         (0x00, "Digit-0"),
         (0x01, "Digit-1"),
@@ -213,8 +238,29 @@ beo4_commanddict = dict(
         (0xDA, "Cinema_On"),
         (0xDB, "Cinema_Off"),
         # Other controls:
-        (0x14, "BACK"),
+        (0xF7, "Stand"),
+        (0x0A, "Clear"),
+        (0x0B, "Store"),
+        (0x0E, "Reset"),
+        (0x14, "Back"),
+        (0x15, "MOTS"),
+        (0x20, "Goto"),
+        (0x28, "Show Clock"),
+        (0x2D, "Eject"),
+        (0x37, "Record"),
+        (0x3F, "Select"),
+        (0x46, "Sound"),
         (0x7F, "Exit"),
+        (0xC0, "Shift-0 / Edit"),
+        (0xC1, "Shift-1 / Random"),
+        (0xC2, "Shift-2"),
+        (0xC3, "Shift-3 / Repeat"),
+        (0xC4, "Shift-4 / Select"),
+        (0xC5, "Shift-5"),
+        (0xC6, "Shift-6"),
+        (0xC7, "Shift-7"),
+        (0xC8, "Shift-8"),
+        (0xC9, "Shift-9"),
         # Continue functionality:
         (0x70, "Rewind Repeat"),
         (0x71, "Wind Repeat"),
@@ -235,10 +281,9 @@ beo4_commanddict = dict(
         (0xCB, "Cursor_Down"),
         (0xCC, "Cursor_Left"),
         (0xCD, "Cursor_Right"),
-        #
+        # Light / Control commands
         (0x9B, "Light"),
         (0x9C, "Command"),
-        # Light Timeout
         (0x58, "Light Timeout"),
         #  Dummy for 'Listen for all commands'
         (0xFF, "<all>"),

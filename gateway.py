@@ -16,6 +16,7 @@ from .const import (
     beo4_commanddict,
     ml_selectedsourcedict,
     reverse_ml_selectedsourcedict,
+    ml_telegram_type_dict,
     ml_destselectordict,
     ml_pictureformatdict,
     ml_state_dict,
@@ -401,7 +402,13 @@ class MasterLinkGateway:
                         self._beolink_source = beolink_source
                     # change the source of the MLN
                     # reporting the change
-                    if sourceActivity != "Standby" and self._devices is not None:
+                    # not sure this works in all situations
+                    sourcePositionInt = response[8] * 256 + response[9]
+                    if (
+                        sourceActivity != "Standby"
+                        and sourcePositionInt > 0
+                        and self._devices is not None
+                    ):
                         for x in self._devices:
                             if x._mln == sourceMLN:
                                 x._source = beolink_source
@@ -564,7 +571,7 @@ def decode_ml_to_string(telegram):
         + " => "
         + decode_device(telegram[0])
         + " TYPE: "
-        + str(telegram[3])
+        + _dictsanitize(ml_telegram_type_dict, telegram[3])
         + " SRC_DEST:"
         + _hexbyte(telegram[4])
         + " ORIG_SRC:"
@@ -678,7 +685,7 @@ def decode_device(d):
     if d == 0xC1:
         return "AUDIO_MASTER"
     if d == 0xC2:
-        return "SLAVE_DEVICE"
+        return "SOURCE_CENTER"  # also known as 'SLAVE_DEVICE' in older documentation
     if d == 0x83:
         return "ALL_LINK_DEVICES"
     if d == 0x80:
@@ -697,7 +704,7 @@ def decode_ml_to_dict(telegram):
     decoded = dict()
     decoded["from_device"] = decode_device(telegram[1])
     decoded["to_device"] = decode_device(telegram[0])
-    decoded["type"] = str(telegram[3])
+    decoded["type"] = _dictsanitize(ml_telegram_type_dict, telegram[3])
     decoded["src_dest"] = _dictsanitize(ml_selectedsourcedict, telegram[4])
     decoded["orig_src"] = _dictsanitize(ml_selectedsourcedict, telegram[5])
     decoded["payload_type"] = _dictsanitize(ml_command_type_dict, telegram[7])
@@ -715,6 +722,19 @@ def decode_ml_to_dict(telegram):
         decoded["payload"]["picture_identifier"] = _dictsanitize(
             ml_pictureformatdict, telegram[23]
         )
+    # display source information
+    if telegram[7] == 0x06:
+        _s = ""
+        for i in range(0, telegram[8] - 5):
+            _s = _s + chr(telegram[i + 15])
+        decoded["payload"]["display_source"] = _s
+    # extended source information
+    if telegram[7] == 0x0B:
+        decoded["payload"]["info_type"] = telegram[10]
+        _s = ""
+        for i in range(0, telegram[8] - 14):
+            _s = _s + chr(telegram[i + 24])
+        decoded["payload"]["info_value"] = _s
     # beo4 command
     if telegram[7] == 0x0D:
         decoded["payload"]["source"] = _dictsanitize(
@@ -772,16 +792,31 @@ def decode_ml_to_dict(telegram):
             decoded["payload"]["subtype"] = "Transfter Key"
         elif telegram[9] == 0x04:
             decoded["payload"]["subtype"] = "Key Received"
+        elif telegram[9] == 0x05:
+            decoded["payload"]["subtype"] = "Timeout"
         else:
             decoded["payload"]["subtype"] = "Undefined"
-    # what audio source
+    # request distributed audio source
+    if telegram[7] == 0x08:
+        if telegram[9] == 0x01:
+            decoded["payload"]["subtype"] = "Request Source"
+        elif telegram[9] == 0x04:
+            decoded["payload"]["subtype"] = "No Source"
+        elif telegram[9] == 0x06:
+            decoded["payload"]["subtype"] = "Source Active"
+            decoded["payload"]["source"] = _dictsanitize(
+                ml_selectedsourcedict, telegram[13]
+            )
+        else:
+            decoded["payload"]["subtype"] = "Undefined"
+    # request local audio source
     if telegram[7] == 0x30:
         if telegram[9] == 0x02:
-            decoded["payload"]["subtype"] = "Request Audio Source"
+            decoded["payload"]["subtype"] = "Request Source"
         elif telegram[9] == 0x04:
-            decoded["payload"]["subtype"] = "No Audio Source"
+            decoded["payload"]["subtype"] = "No Source"
         elif telegram[9] == 0x06:
-            decoded["payload"]["subtype"] = "Audio Source"
+            decoded["payload"]["subtype"] = "Source Active"
             decoded["payload"]["source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[11]
             )
