@@ -6,14 +6,16 @@
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
+            "unknown": "Unexpected error",
+            "invalid_host": "Invalid host format"
         },
         "step": {
             "user": {
                 "data": {
                     "host": "Host",
                     "password": "Password",
-                    "username": "Username"
+                    "username": "Username",
+                    "use_mllog": "Use Undocumented MasterLink Bus Feature"
                 }
             }
         }
