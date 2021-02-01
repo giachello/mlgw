@@ -25,7 +25,7 @@ The configuration flow will ask for the host or IP address, username and passwor
 
 The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Sources) as seen in the picture below. The sources will be reflected in the Home Assistant UI.
 
-![Configuration MLGW](./mlgw_config_sources.png)
+![Configuration MLGW](./mlgw_sources_config.png)
 
 
 
