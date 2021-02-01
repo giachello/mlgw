@@ -6,7 +6,11 @@ This components integrates Bang & Olufsen Master Link Gateway and Beolink Gatewa
 
 [BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
 
-This component manages communication To and From the MLGW and Beolink Gateway. It includes support for a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below). Note that Masterlink Gateway MK I is not supported because it only has a serial connection, whereas this module requires ethernet to the MLGW.
+This component manages communication To and From the MLGW and Beolink Gateway and allows you to use all of the Bang & Olufsen audio and video devices as "media_player" entities in Home Assistant. It includes support for a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below). Note that Masterlink Gateway MK I is not supported because it only has a serial connection, whereas this module requires ethernet to the MLGW.
+
+
+![Mini Media Player](./mini_media_player.png)
+
 
 ## Installation
 
@@ -37,7 +41,19 @@ mlgw:
  ```
 
 
-### Configure Masterlink Gateway
+### Configure Masterlink Gateway through Add Integrations (preferred)
+
+On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
+
+The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
+
+The plugin will automatically pick up the configuraiton from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Sources) as seen in the picture below. The sources will be reflected in the Home Assistant UI.
+
+![Configuration MLGW](./mlgw_config_sources.png)
+
+
+
+### Configure Masterlink Gateway through Configuration.yaml
 
 Add the B&O devices to the gateway and assign the MLN numbers to the devices in the same order as the devices in the HA configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
 
@@ -56,12 +72,13 @@ If you need to set specific MLNs then you can change the devices section to some
       mln: 11
 ```
 
-You can also add a room number, corresponding to your MLGW configuration.
+You can also add a room number, corresponding to your MLGW configuration, and force a Masterlink ID for a device.
 
 ```
   devices:
     - name: Living Room
       room: 9
+      id: VIDEO_MASTER
     - name: Kitchen
       room: 1
 ```
