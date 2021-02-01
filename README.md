@@ -31,7 +31,7 @@ The plugin will automatically pick up the configuration from the the MLGW. The d
 
 ### Manual configuration through Configuration.yaml
 
-Then update your Configuration.yaml as follows (replace your specific host address and other information):
+This is an alternative to the configuration above if you prefer manual configuration. Add to Configuration.yaml (replace with your specific setup):
 ``` 
 mlgw:
   host: 192.168.1.10
@@ -52,8 +52,6 @@ mlgw:
     - name: Bedroom
     - name: Bathroom
  ```
-
-
 
 
 ### Configure Masterlink Gateway 
