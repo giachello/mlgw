@@ -16,7 +16,20 @@ This component manages communication To and From the MLGW and Beolink Gateway an
 
 Create a `mlgw` directory in `/config/custom_components/` and copy all the files in this repository into it.
 
-### Configure Home Assistant
+
+### Automatic configuration through Add Integrations (preferred)
+
+On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
+
+The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
+
+The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Sources) as seen in the picture below. The sources will be reflected in the Home Assistant UI.
+
+![Configuration MLGW](./mlgw_config_sources.png)
+
+
+
+### Manual configuration through Configuration.yaml
 
 Then update your Configuration.yaml as follows (replace your specific host address and other information):
 ``` 
@@ -41,19 +54,9 @@ mlgw:
  ```
 
 
-### Configure Masterlink Gateway through Add Integrations (preferred)
-
-On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
-
-The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
-
-The plugin will automatically pick up the configuraiton from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Sources) as seen in the picture below. The sources will be reflected in the Home Assistant UI.
-
-![Configuration MLGW](./mlgw_config_sources.png)
 
 
-
-### Configure Masterlink Gateway through Configuration.yaml
+### Configure Masterlink Gateway 
 
 Add the B&O devices to the gateway and assign the MLN numbers to the devices in the same order as the devices in the HA configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
 
@@ -83,7 +86,7 @@ You can also add a room number, corresponding to your MLGW configuration, and fo
       room: 1
 ```
 
-Put any NL devices at the end of the list. They typically start at MLN 20.
+Put any NL devices at the end of the list. They typically start at MLN 20. If you don't the ML<>MLN will mess up and the system will not work as intended.
 
 
 ## Special Undocumented Feature: Direct Master Link Connection
