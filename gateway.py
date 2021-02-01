@@ -87,6 +87,9 @@ class MasterLinkGateway:
     def available_sources(self):
         return self._available_sources
 
+    async def terminate_async(self):
+        self.stopped.set()
+
     def ml_connect(self):
         _LOGGER.info("Trying to connect to ML CLI: %s" % (self._host))
         self._connectedML = False
@@ -107,10 +110,10 @@ class MasterLinkGateway:
             #                _LOGGER.debug("Password Response was: %s" % (line))
             #                raise ConnectionError
             attempts = 0
-            max_attempts = 5
+            max_attempts = 3
             while attempts < max_attempts:
                 line = self._tn.read_until(
-                    b"MLGW >", 5
+                    b"MLGW >", 2
                 )  # the third line should be the prompt
                 attempts = attempts + 1
                 if line[-6:] == b"MLGW >":
@@ -306,6 +309,15 @@ class MasterLinkGateway:
         self._payload.append(0x00)  # byte[3] Sec-Source
         self._payload.append(0x00)  # byte[3] Link
         self.mlgw_send(0x01, self._payload)
+
+    ## Send BeoRemote One command to mlgw
+    def mlgw_send_beoremoteone_cmd(self, mln, cmd):
+        self._payload = bytearray()
+        self._payload.append(mln)  # byte[0] MLN
+        self._payload.append(cmd)  # byte[2] Beo4 Command
+        self._payload.append(0x00)  # byte[3] Sec-Source
+        self._payload.append(0x00)  # byte[3] Link
+        self.mlgw_send(0x06, self._payload)
 
     ## Send Beo4 commmand and store the source name
     def mlgw_send_beo4_cmd_select_source(self, mln, dest, source):
@@ -537,6 +549,26 @@ async def create_mlgw_gateway(
     return gateway
 
 
+async def create_mlgw_gateway_with_configuration_data(
+    host, username, password, use_mllog, mlgw_configurationdata, hass
+):
+    port = mlgw_configurationdata["port"]
+
+    gateway = MasterLinkGateway(host, port, username, password, None, None, hass)
+
+    if use_mllog == True:
+        gateway.ml_connect()
+
+    gateway.mlgw_connect()
+
+    def _stop_listener(_event):
+        gateway.stopped.set()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_listener)
+
+    return gateway
+
+
 # ########################################################################################
 # ##### Utility functions
 
@@ -562,121 +594,6 @@ def _dictsanitize(d, s):
 
 
 # ########################################################################################
-# ##### Decode Masterlink Protocol packet to readable string
-
-
-def decode_ml_to_string(telegram):
-    decoded = (
-        decode_device(telegram[1])
-        + " => "
-        + decode_device(telegram[0])
-        + " TYPE: "
-        + _dictsanitize(ml_telegram_type_dict, telegram[3])
-        + " SRC_DEST:"
-        + _hexbyte(telegram[4])
-        + " ORIG_SRC:"
-        + _hexbyte(telegram[5])
-        + " PL_Type: "
-        + _dictsanitize(ml_command_type_dict, telegram[7])
-        + " Len: "
-        + str(telegram[8])
-    )
-    # status info
-    if telegram[7] == 0x87:
-        decoded = (
-            decoded
-            + " Source: "
-            + _dictsanitize(ml_selectedsourcedict, telegram[10])
-            + " Ch/Track: "
-            + str(telegram[19])
-            + " Activity: "
-            + _dictsanitize(ml_state_dict, telegram[21])
-            + " Source Medium: "
-            + str(_hexword(telegram[18], telegram[17]))
-            + " Picture Identifier: "
-            + _dictsanitize(ml_pictureformatdict, telegram[23])
-        )
-    # beo4 command
-    if telegram[7] == 0x0D:
-        decoded = (
-            decoded
-            + " Source: "
-            + _dictsanitize(ml_selectedsourcedict, telegram[10])
-            + " Command: "
-            + _dictsanitize(beo4_commanddict, telegram[11])
-        )
-    # track info long
-    if telegram[7] == 0x82:
-        decoded = (
-            decoded
-            + " Source: "
-            + _dictsanitize(ml_selectedsourcedict, telegram[11])
-            + " Ch/Track: "
-            + str(telegram[12])
-            + " Activity: "
-            + _dictsanitize(ml_state_dict, telegram[13])
-        )
-    # track info
-    if telegram[7] == 0x44:
-        if telegram[9] == 0x07:
-            decoded = (
-                decoded
-                + " Switch Source. Old: "
-                + _dictsanitize(ml_selectedsourcedict, telegram[11])
-                + " New: "
-                + _dictsanitize(ml_selectedsourcedict, telegram[22])
-            )
-        elif telegram[9] == 0x05:
-            decoded = (
-                decoded
-                + " Current Source: "
-                + _dictsanitize(ml_selectedsourcedict, telegram[11])
-            )
-        else:
-            decoded = decoded + " Undefined"
-    # goto source
-    if telegram[7] == 0x45:
-        decoded = (
-            decoded
-            + " Source: "
-            + _dictsanitize(ml_selectedsourcedict, telegram[11])
-            + " Ch/Track: "
-            + str(telegram[12])
-        )
-    # remote request
-    if telegram[7] == 0x20:
-        decoded = (
-            decoded
-            + " Command: "
-            + _dictsanitize(beo4_commanddict, telegram[14])
-            + " Dest Selector: "
-            + _dictsanitize(ml_destselectordict, telegram[11])
-        )
-    # request_key
-    if telegram[7] == 0x5C:
-        if telegram[9] == 0x01:
-            decoded = decoded + " Request Key"
-        elif telegram[9] == 0x02:
-            decoded = decoded + " Transfter Key"
-        elif telegram[9] == 0x04:
-            decoded = decoded + " Key Received"
-        else:
-            decoded = decoded + " Undefined"
-    # what audio source
-    if telegram[7] == 0x30:
-        if telegram[9] == 0x02:
-            decoded = decoded + " Request Audio Source"
-        elif telegram[9] == 0x04:
-            decoded = decoded + " No Audio Source"
-        elif telegram[9] == 0x06:
-            decoded = (
-                decoded
-                + " Audio Source: "
-                + _dictsanitize(ml_selectedsourcedict, telegram[11])
-            )
-        else:
-            decoded = decoded + " Undefined"
-    return decoded
 
 
 def decode_device(d):

@@ -16,6 +16,12 @@ Thanks to https://github.com/Lele-72 for discovering a lot of the more arcane co
 DOMAIN = "mlgw"
 MLGW_GATEWAY = "MLGW_GATEWAY"
 MLGW_DEVICES = "MLGW_DEVICES"
+MLGW_GATEWAY_CONFIGURATION_DATA = "MLGW_GATEWAY_CONFIG_DATA"
+
+# ##### Requests data
+BASE_URL = "http://{0}/{1}"
+MLGW_CONFIG_JSON_PATH = "mlgwpservices.json"
+TIMEOUT = 5.0
 
 
 # ########################################################################################
@@ -36,6 +42,7 @@ MLGW_AVAILABLE_SOURCES = ["CD", "RADIO", "A.MEM"]
 CONF_MLGW_DEVICE_NAME = "name"
 CONF_MLGW_DEVICE_MLN = "mln"
 CONF_MLGW_DEVICE_ROOM = "room"
+CONF_MLGW_DEVICE_MLID = "id"
 # this is an undocumented feature of the MasterLink Gateway that provides complete access to the ML data bus,
 # so that the integration can listen to all events running on the bus and provide enhanced functionality.
 # if you decide to use it, then Username must be 'admin' and password must be the admin password.
@@ -156,17 +163,17 @@ ml_selectedsourcedict = dict(
         (0x00, "NONE"),
         (0x0B, "TV"),
         (0x15, "V.MEM"),
-        (0x16, "DVD_2"),
+        (0x16, "DVD2"),
         (0x1F, "DTV"),
         (0x29, "DVD"),
-        (0x33, "V_AUX"),
-        (0x3E, "V_AUX2"),
+        (0x33, "V.AUX"),
+        (0x3E, "DOORCAM"),
         (0x47, "PC"),
         (0x6F, "RADIO"),
         (0x79, "A.MEM"),
         (0x7A, "N.MUSIC"),
         (0x8D, "CD"),
-        (0x97, "A_AUX"),
+        (0x97, "A.AUX"),
         (0xA1, "N.RADIO"),
         #  Dummy for 'Listen for all sources'
         (0xFE, "<ALL>"),  # have also seen 0xFF as "all"
@@ -182,8 +189,8 @@ beo4_commanddict = dict(
         (0x47, "Sleep"),
         (0x80, "TV"),
         (0x81, "Radio"),
-        (0x82, "DTV2"),
-        (0x83, "Aux_A"),
+        (0x82, "V.Aux"),
+        (0x83, "A.Aux"),
         (0x84, "Media"),
         (0x85, "V.Mem"),
         (0x86, "DVD"),

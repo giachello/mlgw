@@ -1,8 +1,9 @@
 """The MasterLink Gateway integration."""
 import asyncio
-from .gateway import create_mlgw_gateway
+from .gateway import create_mlgw_gateway, create_mlgw_gateway_with_configuration_data
 from .media_player import BeoSpeaker
 import logging
+import json
 
 import voluptuous as vol
 
@@ -20,6 +21,7 @@ from homeassistant.helpers import config_validation as cv, discovery
 from .const import (
     DOMAIN,
     MLGW_GATEWAY,
+    MLGW_GATEWAY_CONFIGURATION_DATA,
     MLGW_DEVICES,
     CONF_MLGW_DEFAULT_SOURCE,
     CONF_MLGW_AVAILABLE_SOURCES,
@@ -28,7 +30,11 @@ from .const import (
     CONF_MLGW_DEVICE_NAME,
     CONF_MLGW_DEVICE_MLN,
     CONF_MLGW_DEVICE_ROOM,
+    CONF_MLGW_DEVICE_MLID,
     CONF_MLGW_USE_MLLOG,
+    BASE_URL,
+    TIMEOUT,
+    MLGW_CONFIG_JSON_PATH,
 )
 
 
@@ -54,6 +60,7 @@ CONFIG_SCHEMA = vol.Schema(
                             vol.Required(CONF_MLGW_DEVICE_NAME): cv.string,
                             vol.Optional(CONF_MLGW_DEVICE_MLN): cv.positive_int,
                             vol.Optional(CONF_MLGW_DEVICE_ROOM): cv.positive_int,
+                            vol.Optional(CONF_MLGW_DEVICE_MLID): cv.string,
                         }
                     ],
                 ),
@@ -70,7 +77,7 @@ _LOGGER = logging.getLogger(__name__)
 # For your initial PR, limit it to 1 platform.
 PLATFORMS = ["media_player"]
 
-
+# This is the routine that is used when configuring from configuration.yaml
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the MasterLink Gateway component."""
     hass.data.setdefault(DOMAIN, {})
@@ -111,39 +118,68 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 
-# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-#    """Set up MasterLink Gateway from a config entry."""
-#    # TODO Store an API object for your platforms to access
-#    # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
-#
-#    host = entry.data(CONF_HOST)
-#    password = entry.data(CONF_PASSWORD)
-#
-#    gateway = await create_mlgw_gateway(host, password, hass)
-#    if not gateway:
-#        return False
-#    hass.data[DOMAIN][MLGW_GATEWAY] = gateway
-#
-#    #    for component in PLATFORMS:
-#    #        hass.async_create_task(
-#    #            hass.config_entries.async_forward_entry_setup(entry, component)
-#    #        )
-#
-#    return True
+def get_mlgw_configuration_data(host: str, username: str, password: str):
+    import requests
+    from requests.auth import HTTPDigestAuth
+
+    response = requests.get(
+        BASE_URL.format(host, MLGW_CONFIG_JSON_PATH),
+        timeout=TIMEOUT,
+        auth=HTTPDigestAuth(username, password),
+    )
+    if response.status_code != 200:
+        return None
+
+    return response.json()
 
 
-# async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-#    """Unload a config entry."""
-#    #    unload_ok = all(
-#    #        await asyncio.gather(
-#    #            *[
-#    #                hass.config_entries.async_forward_entry_unload(entry, component)
-#    #                for component in PLATFORMS
-#    #            ]
-#    #        )
-#    #    )
-#    #    if unload_ok:
-#    gateway = hass.data[DOMAIN].pop(MLGW_GATEWAY)
-#    await gateway.terminate_async()
-#
-#    return True
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up MasterLink Gateway from a config entry."""
+    # TODO Store an API object for your platforms to access
+    # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
+
+    host = entry.data.get(CONF_HOST)
+    password = entry.data.get(CONF_PASSWORD)
+    username = entry.data.get(CONF_USERNAME)
+    use_mllog = entry.data.get(CONF_MLGW_USE_MLLOG)
+
+    mlgw_configurationdata = await hass.async_add_executor_job(
+        get_mlgw_configuration_data, host, username, password
+    )
+
+    if mlgw_configurationdata is None:
+        return False
+
+    gateway = await create_mlgw_gateway_with_configuration_data(
+        host, username, password, use_mllog, mlgw_configurationdata, hass
+    )
+    if not gateway:
+        return False
+    hass.data[DOMAIN][MLGW_GATEWAY] = gateway
+    hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
+
+    for component in PLATFORMS:
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, component)
+        )
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Unload a config entry."""
+    _LOGGER.debug("Async unload entry")
+
+    unload_ok = all(
+        await asyncio.gather(
+            *[
+                hass.config_entries.async_forward_entry_unload(entry, component)
+                for component in PLATFORMS
+            ]
+        )
+    )
+    if unload_ok:
+        gateway = hass.data[DOMAIN].pop(MLGW_GATEWAY)
+        await gateway.terminate_async()
+
+    return True
