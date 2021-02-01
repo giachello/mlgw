@@ -23,7 +23,10 @@ On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
 
 The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
 
-The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Sources) as seen in the picture below. The sources will be reflected in the Home Assistant UI.
+The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Devices->Beolink and Programming->Sources) as seen in the pictures below. The sources will be reflected in the Home Assistant UI.
+
+
+![Configuration MLGW](./mlgw_configuration.png)
 
 ![Configuration MLGW](./mlgw_sources_config.png)
 
@@ -53,14 +56,9 @@ mlgw:
     - name: Bathroom
  ```
 
-
-### Configure Masterlink Gateway 
-
-Add the B&O devices to the gateway and assign the MLN numbers to the devices in the same order as the devices in the HA configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
+Add the devices in the same order as the devices in the MLGW/BLGW configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
 
 If you don't set a MLN (masterlink node number) for the devices, they need to be defined in the same order as the MLGW configuration, and MLNs will be assigned sequentially, starting from 1 for the first one. For example the devices above, correspond to this configuration in the MLGW:
-
-![Configuration MLGW](./mlgw_configuration.png)
 
 
 If you need to set specific MLNs then you can change the devices section to something like this:
