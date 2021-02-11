@@ -113,14 +113,14 @@ class MasterLinkGateway:
             max_attempts = 3
             while attempts < max_attempts:
                 line = self._tn.read_until(
-                    b"MLGW >", 2
+                    b"LGW >", 2
                 )  # the third line should be the prompt
                 attempts = attempts + 1
-                if line[-6:] == b"MLGW >":
+                if line[-5:] == b"LGW >":
                     break
                 time.sleep(0.5)
 
-            if line[-6:] != b"MLGW >":
+            if line[-5:] != b"LGW >":
                 _LOGGER.debug("Unexpected CLI prompt: %s" % (line))
                 raise ConnectionError
 
