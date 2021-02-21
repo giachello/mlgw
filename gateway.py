@@ -103,12 +103,8 @@ class MasterLinkGateway:
                 raise ConnectionError
             self._tn.write(self._password.encode("ascii") + b"\n")
 
-            #            line = self._tn.read_until(
-            #                b"Logged in", 3
-            #            )  # The first line says "Logged In"
-            #            if line[-9:] != b"Logged in":
-            #                _LOGGER.debug("Password Response was: %s" % (line))
-            #                raise ConnectionError
+            # Try to read until we hit the command prompt.
+            # BLGW has a "BLGW >" prompt. MLGW has a "MLGW >" prompt
             attempts = 0
             max_attempts = 3
             while attempts < max_attempts:
@@ -213,7 +209,7 @@ class MasterLinkGateway:
                     encoded_telegram["bytes"] = "".join(
                         "{:02x}".format(x) for x in telegram
                     )
-                    _LOGGER.debug("Processing telegram: %s", encoded_telegram)
+                    _LOGGER.debug("ML telegram: %s", encoded_telegram)
 
                     # try to find the mln of the from_device and to_device
                     if self._devices is not None:
@@ -231,6 +227,9 @@ class MasterLinkGateway:
                         self._notify_incoming_ML_telegram, encoded_telegram
                     )
                 except ValueError:
+                    continue
+                except IndexError:
+                    _LOGGER.debug("ML CLI Thread: error parsing telegram: %s", line)
                     continue
             else:  # else sleep a bit and then continue reading
                 time.sleep(0.5)

@@ -120,13 +120,21 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 def get_mlgw_configuration_data(host: str, username: str, password: str):
     import requests
-    from requests.auth import HTTPDigestAuth
+    from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 
+    # try with Digest Auth first
     response = requests.get(
         BASE_URL.format(host, MLGW_CONFIG_JSON_PATH),
         timeout=TIMEOUT,
         auth=HTTPDigestAuth(username, password),
     )
+    # if unauthorized use fallback to Basic Auth
+    if response.status_code == 401:
+        response = requests.get(
+            BASE_URL.format(host, MLGW_CONFIG_JSON_PATH),
+            timeout=TIMEOUT,
+            auth=HTTPBasicAuth(username, password),
+        )
     if response.status_code != 200:
         return None
 

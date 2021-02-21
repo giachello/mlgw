@@ -4,19 +4,20 @@ import ipaddress
 import re
 import voluptuous as vol
 import requests
-from requests.auth import HTTPDigestAuth
+from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 from requests.exceptions import ConnectTimeout
 
 from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 
 from .const import (
-    DOMAIN,
     CONF_MLGW_USE_MLLOG,
     BASE_URL,
     MLGW_CONFIG_JSON_PATH,
     TIMEOUT,
 )  # pylint:disable=unused-import
+
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,11 +54,20 @@ class CheckPasswordMLGWHub:
 
     def authenticate(self, user, password) -> bool:
         """Test if we can authenticate with the host."""
+        # try Digest Auth first (this is needed for the MLGW)
         response = requests.get(
             BASE_URL.format(self._host, MLGW_CONFIG_JSON_PATH),
             timeout=TIMEOUT,
             auth=HTTPDigestAuth(user, password),
         )
+        # try Basic Auth next (this is needed for the BLGW)
+        if response.status_code == 401:
+            response = requests.get(
+                BASE_URL.format(self._host, MLGW_CONFIG_JSON_PATH),
+                timeout=TIMEOUT,
+                auth=HTTPBasicAuth(user, password),
+            )
+
         if response.status_code == 401:
             _LOGGER.debug("Invalid authentication 401")
             raise InvalidAuth()
