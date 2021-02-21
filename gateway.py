@@ -74,11 +74,12 @@ class MasterLinkGateway:
     def connectedMLGW(self):
         return self._connectedMLGW
 
-    # return the latest known active source
+    # return the latest known active source, or None if there was no known active source.
     @property
     def beolink_source(self):
         return self._beolink_source
 
+    # return the default source, or None if there is no default source
     @property
     def default_source(self):
         return self._default_source
@@ -602,6 +603,10 @@ def decode_device(d):
         return "AUDIO_MASTER"
     if d == 0xC2:
         return "SOURCE_CENTER"  # also known as 'SLAVE_DEVICE' in older documentation
+    if d == 0x81:
+        return "ALL_AUDIO_LINK_DEVICES"
+    if d == 0x82:
+        return "ALL_VIDEO_LINK_DEVICES"
     if d == 0x83:
         return "ALL_LINK_DEVICES"
     if d == 0x80:
@@ -628,13 +633,14 @@ def decode_ml_to_dict(telegram):
     decoded["payload"] = dict()
 
     # source status info
+    # TTFF__TYDSOS__PTLLPS SR____________SLSHTR__AC__PI________________________TRTR______
     if telegram[7] == 0x87:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
-        decoded["payload"]["channel_track"] = str(_hexword(telegram[18], telegram[19]))
+        decoded["payload"]["channel_track"] = str(telegram[19])
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[21])
-        decoded["payload"]["source_medium"] = str(telegram[17])
+        decoded["payload"]["source_medium"] = str(_hexword(telegram[18], telegram[17]))
         decoded["payload"]["picture_identifier"] = _dictsanitize(
             ml_pictureformatdict, telegram[23]
         )

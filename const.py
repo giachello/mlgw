@@ -72,7 +72,8 @@ ml_command_type_dict = dict(
         (0x11, "RELEASE"),  # when a device turns off
         (0x20, "MLGW_REMOTE_BEO4"),
         # REQUEST_LOCAL_SOURCE: Seen when a device asks what source is playing locally to a device
-        # subtypes seen 02:request 04:no source 06:has source (byte 11 is source)
+        # subtypes seen 02:request 04:no source 05:secondary source 06:primary source (byte 11 is source)
+        # byte 10 is bitmask for distribution: 0x01: coaxial cable - 0x02: MasterLink ML_BUS - 0x08: local screen
         (0x30, "REQUEST_LOCAL_SOURCE"),
         (0x3C, "TIMER"),
         (0x40, "CLOCK"),
@@ -81,8 +82,12 @@ ml_command_type_dict = dict(
         # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
         (0x45, "GOTO_SOURCE"),
         (0x5C, "LOCK_MANAGER_COMMAND"),
+        (0x5E, "CONFIGURATION"),
         (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
+        # Source Status
+        # byte 10:source - byte 18,19: channel/track - byte 21:activity - byte 17: source medium - byte 23: picture identifiedr
+        # Byte 13: 80 when DTV is turned off. 00 when it's on
         (0x87, "STATUS_INFO"),
         (0x94, "VIDEO_TRACK_INFO"),
         #
@@ -91,14 +96,20 @@ ml_command_type_dict = dict(
         # DISPLAY_SOURCE: Message sent with a payload showing the displayed source name.
         # subtype 3 has the printable source name starting at byte 10 of the payload
         (0x06, "DISPLAY_SOURCE"),
-        # START_DISTRIBUTION: Sent when a locally playing source starts being distributed
-        (0x07, "START_DISTRIBUTION"),
+        # START_VIDEO_DISTRIBUTION: Sent when a locally playing source starts being distributed on coaxial cable
+        (0x07, "START_VIDEO_DISTRIBUTION"),
         # EXTENDED_SOURCE_INFORMATION: message with 6 subtypes showing information about the source.
         # Printable info at byte 14 of the payload
         # subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
         (0x0B, "EXTENDED_SOURCE_INFORMATION"),
         (0x96, "PC_PRESENT"),
-        (0x98, "PICTURE_STATUS_INFO"),
+        # PICTURE AND SOUND STATUS
+        # byte 0: bit 0-1: sound status - bit 2-3: stereo mode (can be 0 in a 5.1 setup)
+        # byte 1: speaker mode (see below)
+        # byte 2: audio volume
+        # byte 3: picture format identifier (see below)
+        # byte 4: bit 0: screen1 mute - bit 1: screen2 mute - bit 2: screen1 active - bit 3: screen2 active - bit 4: cinema mode
+        (0x98, "PICT_SOUND_STATUS"),
     ]
 )
 

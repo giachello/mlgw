@@ -1,3 +1,35 @@
+"""
+
+Media Player platform for Master Link Gateway connected devices.
+
+------------------------------------------------------------
+Where the current sources get modified. There are 3 places:
+
+Media player entity subscribes to
+GOTO SOURCE
+TRACK INFO
+Media player entity Select Source
+
+Gateway changes media player source
+in _mlgw_thread (source status, if the source is not in standby and position>0)
+
+Gateway keeps track of last selected source
+in _ml_thread (GOTO SOURCE)
+in send beo4 message (select source)
+
+-------------------------------------------------------------
+Where state (ON/OFF) gets modified:
+
+Media Player
+GOTO SOURCE
+RELEASE
+turn on / Select Source
+
+Gateway (Pict and Snd status)
+
+
+
+"""
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.core import Event, CALLBACK_TYPE
@@ -361,7 +393,16 @@ class BeoSpeaker(MediaPlayerEntity):
             self._pwon = False
 
     def turn_on(self):
-        self.select_source(self._gateway.beolink_source)
+        # when turning on this speaker, use the last known source active on beolink
+        # if there is no such source, then use the last source used on this speaker
+        # if there is no such source, then use the first source in the available sources list.
+        # if there is no source in that list, then do nothing
+        if self._gateway.beolink_source is not None:
+            self.select_source(self._gateway.beolink_source)
+        elif self._source is not None:
+            self.select_source(self._source)
+        elif len(self._available_sources) > 0:
+            self.select_source(self._available_sources[0])
 
     # An alternate is to turn on with volume up which for most devices, turns it on without changing source, but it does nothing on the BeoSound system.
     #        self._pwon = True
