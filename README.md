@@ -185,6 +185,6 @@ logger:
 
 ## Not implemented / TODO
 
-* A proper config_flow to allow for UI-based configuration
+* Zeroconf autoconfiguration flow
 * Timer and Clock packets unpacking
 
