@@ -1,6 +1,6 @@
 # Bang & Olufsen MasterLink Gateway / BeoLink Gateway Home Assistant component
 
-This components integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to the Home Assistant. 
+This component integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to Home Assistant. 
 
 [Masterlink Gateway Product Description](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/ML%20Gateway_Installation%20Guide%202v2.pdf)
 
