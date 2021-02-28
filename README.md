@@ -32,7 +32,7 @@ The plugin will automatically pick up the configuration from the the MLGW. The d
 
 
 
-### Manual configuration through Configuration.yaml
+### Manual configuration through Configuration.yaml (deprecated, I'll likely remove this in the future)
 
 This is an alternative to the configuration above if you prefer manual configuration. Add to Configuration.yaml (replace with your specific setup):
 ``` 
