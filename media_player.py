@@ -265,10 +265,9 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
                 _source["secondary"] = 0
                 _source["link"] = 0
                 _source["statusID"] = reverse_ml_selectedsourcedict.get(_x)
+                _source["selectID"] = BEO4_CMDS.get(_x)
                 _source["selectCmds"] = list()
-                _source["selectCmds"][0] = dict()
-                _source["selectCmds"][0]["cmd"] = BEO4_CMDS.get(_x)
-                _source["selectCmds"][0]["format"] = "F0"
+                _source["selectCmds"].append({"cmd": BEO4_CMDS.get(_x), "format": "F0"})
                 device_sources.append(_source)
 
             beospeaker = BeoSpeaker(
@@ -306,14 +305,24 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
         _LOGGER.error("MLGW Not connected while trying to add media_player devices")
 
 
-"""
-BeoSpeaker represents a single MasterLink device on the Masterlink bus. E.g., a speaker like
-BeoSound 3500 or a Masterlink Master device like a receiver or TV (e.g, a Beosound 3000)
-Because the Masterlink has only one active source across all the speakers, we maintain the
-source state in the Gateway class, which manages the relationship with the Masterlink Gateway.
+# #########################################################################################
+# convert statusID into selectID (e.g., Radio 0x6f ==> 0x81)
 
-It's not very clean, but it works.
-"""
+
+def statusID_to_selectID(statusId):
+    return BEO4_CMDS.get(ml_selectedsourcedict.get(statusId).upper())
+
+
+# #########################################################################################
+
+# BeoSpeaker represents a single MasterLink device on the Masterlink bus. E.g., a speaker like
+# BeoSound 3500 or a Masterlink Master device like a receiver or TV (e.g, a Beosound 3000)
+# Because the Masterlink has only one active source across all the speakers, the Gateway class
+# maintains track of that source, and tells the relevant MLNs about changes if the user is
+# only using the MLGW as communication mechanism.
+# If ML Bus listening is active, then this class listens to TRACK_INFO and other commands that
+# represent the source on the masterlink bus and changes accordingly.
+#
 
 
 class BeoSpeaker(MediaPlayerEntity):
@@ -368,8 +377,11 @@ class BeoSpeaker(MediaPlayerEntity):
                         # reflect that the device is on and store the requested source
                         self._pwon = True
                         # find the source based on the source ID
+                        _s = _event.data["payload"]["sourceID"]
                         for _x in self._sources:
-                            if _x["statusID"] == _event.data["payload"]["sourceID"]:
+                            if _x["statusID"] == _s or _x[
+                                "selectID"
+                            ] == statusID_to_selectID(_s):
                                 self._source = _x["name"]
 
                 if _event.data["to_device"] == self._ml:
@@ -378,8 +390,11 @@ class BeoSpeaker(MediaPlayerEntity):
                         and _event.data["payload"]["subtype"] == "Change Source"
                     ):
                         # find the source based on the source ID
+                        _s = _event.data["payload"]["sourceID"]
                         for _x in self._sources:
-                            if _x["statusID"] == _event.data["payload"]["sourceID"]:
+                            if _x["statusID"] == _s or _x[
+                                "selectID"
+                            ] == statusID_to_selectID(_s):
                                 self._source = _x["name"]
                     elif _event.data["payload_type"] == "TRACK_INFO_LONG":
                         if _event.data["payload"]["channel_track"] > 0:
@@ -494,7 +509,9 @@ class BeoSpeaker(MediaPlayerEntity):
         # to be called by the gateway to set the source (the source is a statusID e.g., radio=0x6f)
         # find the source based on the source ID
         for _x in self._sources:
-            if _x["statusID"] == source:
+            if _x["statusID"] == source or _x["selectID"] == statusID_to_selectID(
+                source
+            ):
                 self._source = _x["name"]
 
     def turn_on(self):
@@ -532,35 +549,39 @@ class BeoSpeaker(MediaPlayerEntity):
         )
 
     def select_source(self, source):
-        self._pwon = True
-        self._source = source
-
         # look up the full information record for the source
-        source_info = self._sources[self._source_names.index(source)]
+        try:
+            source_info = self._sources[self._source_names.index(source)]
 
-        # traditional sources (Beo4)
-        if source_info["format"] == "F0":
-            dest = source_info["destination"]
-            cmd = source_info["selectCmds"][0]["cmd"]
-            sec = source_info["secondary"]
-            link = source_info["link"]
-            if (
-                dest is not None
-                and cmd is not None
-                and sec is not None
-                and link is not None
-            ):
-                self._gateway.mlgw_send_beo4_select_source(
-                    self._mln, dest, cmd, sec, link
-                )
-        elif source_info["format"] == "F20":  # Network Link / BeoOne sources
-            unit = source_info["selectCmds"][0]["unit"]
-            cmd = source_info["selectCmds"][0]["cmd"]
-            network_bit = source_info["networkBit"]
-            if unit is not None and cmd is not None and network_bit is not None:
-                self._gateway.mlgw_send_beoremoteone_select_source(
-                    self._mln, cmd, unit, network_bit
-                )
+            self._pwon = True
+            self._source = source
+
+            # traditional sources (Beo4)
+            if source_info["format"] == "F0":
+                dest = source_info["destination"]
+                cmd = source_info["selectCmds"][0]["cmd"]
+                sec = source_info["secondary"]
+                link = source_info["link"]
+                if (
+                    dest is not None
+                    and cmd is not None
+                    and sec is not None
+                    and link is not None
+                ):
+                    self._gateway.mlgw_send_beo4_select_source(
+                        self._mln, dest, cmd, sec, link
+                    )
+            elif source_info["format"] == "F20":  # Network Link / BeoOne sources
+                unit = source_info["selectCmds"][0]["unit"]
+                cmd = source_info["selectCmds"][0]["cmd"]
+                network_bit = source_info["networkBit"]
+                if unit is not None and cmd is not None and network_bit is not None:
+                    self._gateway.mlgw_send_beoremoteone_select_source(
+                        self._mln, cmd, unit, network_bit
+                    )
+
+        except ValueError:
+            _LOGGER.debug("BeoSpeaker: source not known: %s", source)
 
     def volume_up(self):
         dest = self._sources[self._source_names.index(self._source)]["destination"]
