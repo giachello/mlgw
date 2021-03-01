@@ -102,7 +102,10 @@ class MasterLinkGateway:
             if line[-7:] != b"login: ":
                 _LOGGER.debug("Unexpected login prompt: %s" % (line))
                 raise ConnectionError
+            # put some small pauses to see if we can avoid occasional login problems
+            time.sleep(0.1)
             self._tn.write(self._password.encode("ascii") + b"\n")
+            time.sleep(0.1)
 
             # Try to read until we hit the command prompt.
             # BLGW has a "BLGW >" prompt. MLGW has a "MLGW >" prompt
@@ -253,7 +256,7 @@ class MasterLinkGateway:
 
     ## Login
     def mlgw_login(self):
-        _LOGGER.info("mlgw: Trying to login")
+        _LOGGER.debug("mlgw: Trying to login")
         if self._connectedMLGW:
             wrkstr = self._user + chr(0x00) + self._password
             payload = bytearray()
@@ -301,28 +304,40 @@ class MasterLinkGateway:
             time.sleep(1)
 
     ## Send Beo4 command to mlgw
-    def mlgw_send_beo4_cmd(self, mln, dest, cmd):
+    def mlgw_send_beo4_cmd(self, mln, dest, cmd, sec_source=0x00, link=0x00):
         self._payload = bytearray()
         self._payload.append(mln)  # byte[0] MLN
         self._payload.append(dest)  # byte[1] Dest-Sel (0x00, 0x01, 0x05, 0x0f)
         self._payload.append(cmd)  # byte[2] Beo4 Command
-        self._payload.append(0x00)  # byte[3] Sec-Source
-        self._payload.append(0x00)  # byte[3] Link
+        self._payload.append(sec_source)  # byte[3] Sec-Source
+        self._payload.append(link)  # byte[4] Link
         self.mlgw_send(0x01, self._payload)
 
     ## Send BeoRemote One command to mlgw
-    def mlgw_send_beoremoteone_cmd(self, mln, cmd):
+    def mlgw_send_beoremoteone_cmd(self, mln, cmd, network_bit: bool):
         self._payload = bytearray()
         self._payload.append(mln)  # byte[0] MLN
-        self._payload.append(cmd)  # byte[2] Beo4 Command
-        self._payload.append(0x00)  # byte[3] Sec-Source
-        self._payload.append(0x00)  # byte[3] Link
+        self._payload.append(cmd)  # byte[1] Beo4 Command
+        self._payload.append(0x00)  # byte[2] AV (needs to be 0)
+        self._payload.append(network_bit)  # byte[3] Network_bit
         self.mlgw_send(0x06, self._payload)
 
+    ## Send BeoRemote One Source Select to mlgw
+    def mlgw_send_beoremoteone_select_source(self, mln, cmd, unit, network_bit: bool):
+        self._payload = bytearray()
+        self._payload.append(mln)  # byte[0] MLN
+        self._payload.append(cmd)  # byte[1] Beo4 Command
+        self._payload.append(unit)  # byte[2] Unit
+        self._payload.append(0x00)  # byte[3] AV (needs to be 0)
+        self._payload.append(network_bit)  # byte[4] Network_bit
+        self.mlgw_send(0x07, self._payload)
+
     ## Send Beo4 commmand and store the source name
-    def mlgw_send_beo4_cmd_select_source(self, mln, dest, source):
-        self._beolink_source = source
-        self.mlgw_send_beo4_cmd(mln, dest, BEO4_CMDS.get(source))
+    def mlgw_send_beo4_select_source(
+        self, mln, dest, source, sec_source, link
+    ):  # change to use a source ID
+        self._beolink_source = _dictsanitize(beo4_commanddict, source).upper()
+        self.mlgw_send_beo4_cmd(mln, dest, source, sec_source, link)
 
     def mlgw_send_virtual_btn_press(self, btn):
         self.mlgw_send(0x20, [btn])
@@ -333,9 +348,7 @@ class MasterLinkGateway:
             # Request serial number
             self.mlgw_send(MLGW_PL.get("REQUEST SERIAL NUMBER"), "")
             (_, self._serial) = self.mlgw_receive()
-            _LOGGER.warning(
-                "mlgw: Serial number of ML Gateway is " + self._serial
-            )  # info
+            _LOGGER.info("mlgw: Serial number of ML Gateway is " + self._serial)  # info
         return
 
     # This is the thread function to manage the MLGW connection
@@ -380,12 +393,12 @@ class MasterLinkGateway:
 
                 elif msg_byte == 0x31:  # Login Status
                     if msg_payload == "FAIL":
-                        _LOGGER.warning(
+                        _LOGGER.info(
                             "mlgw: MLGW protocol Password required to %s", self._host
                         )
                         self.mlgw_login()
                     elif msg_payload == "OK":
-                        _LOGGER.warning(
+                        _LOGGER.info(
                             "mlgw: MLGW protocol Login successful to %s", self._host
                         )
                         self.mlgw_get_serial()
@@ -394,7 +407,6 @@ class MasterLinkGateway:
                 #                    _LOGGER.debug("mlgw: pong")
 
                 elif msg_byte == 0x02:  # Source status
-                    #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     sourceMLN = response[4]
                     beolink_source = _getselectedsourcestr(response[5]).upper()
                     sourceMediumPosition = _hexword(response[6], response[7])
@@ -410,6 +422,7 @@ class MasterLinkGateway:
                     decoded["source_activity"] = sourceActivity
                     decoded["picture_format"] = pictureFormat
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
+                    # remember the new source
                     if sourceActivity != "Standby":
                         self._beolink_source = beolink_source
                     # change the source of the MLN
@@ -423,10 +436,9 @@ class MasterLinkGateway:
                     ):
                         for x in self._devices:
                             if x._mln == sourceMLN:
-                                x._source = beolink_source
+                                x.set_source(response[5])
 
                 elif msg_byte == 0x03:  # Picture and Sound status
-                    #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
                     decoded = dict()
                     decoded["payload_type"] = "pict_sound_status"
                     sourceMLN = response[4]
@@ -629,7 +641,7 @@ def decode_ml_to_dict(telegram):
     decoded["src_dest"] = _dictsanitize(ml_selectedsourcedict, telegram[4])
     decoded["orig_src"] = _dictsanitize(ml_selectedsourcedict, telegram[5])
     decoded["payload_type"] = _dictsanitize(ml_command_type_dict, telegram[7])
-    decoded["payload_len"] = str(telegram[8])
+    decoded["payload_len"] = telegram[8]
     decoded["payload"] = dict()
 
     # source status info
@@ -638,9 +650,10 @@ def decode_ml_to_dict(telegram):
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
-        decoded["payload"]["channel_track"] = str(telegram[19])
+        decoded["payload"]["sourceID"] = telegram[10]
+        decoded["payload"]["channel_track"] = telegram[19]
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[21])
-        decoded["payload"]["source_medium"] = str(_hexword(telegram[18], telegram[17]))
+        decoded["payload"]["source_medium"] = _hexword(telegram[18], telegram[17])
         decoded["payload"]["picture_identifier"] = _dictsanitize(
             ml_pictureformatdict, telegram[23]
         )
@@ -662,20 +675,23 @@ def decode_ml_to_dict(telegram):
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
+        decoded["payload"]["sourceID"] = telegram[10]
         decoded["payload"]["command"] = _dictsanitize(beo4_commanddict, telegram[11])
     # audio track info long
     if telegram[7] == 0x82:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[11]
         )
-        decoded["payload"]["channel_track"] = str(telegram[12])
+        decoded["payload"]["sourceID"] = telegram[11]
+        decoded["payload"]["channel_track"] = telegram[12]
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[13])
-    # video track info long
+    # video track info
     if telegram[7] == 0x94:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[13]
         )
-        decoded["payload"]["channel_track"] = str(_hexword(telegram[11], telegram[12]))
+        decoded["payload"]["sourceID"] = telegram[13]
+        decoded["payload"]["channel_track"] = _hexword(telegram[11], telegram[12])
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[14])
     # track change info
     if telegram[7] == 0x44:
@@ -684,14 +700,17 @@ def decode_ml_to_dict(telegram):
             decoded["payload"]["prev_source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[11]
             )
+            decoded["payload"]["prev_sourceID"] = telegram[11]
             decoded["payload"]["source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[22]
             )
+            decoded["payload"]["sourceID"] = telegram[22]
         elif telegram[9] == 0x05:
             decoded["payload"]["subtype"] = "Current Source"
             decoded["payload"]["source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[11]
             )
+            decoded["payload"]["sourceID"] = telegram[11]
         else:
             decoded["payload"]["subtype"] = "Undefined"
     # goto source
@@ -699,7 +718,8 @@ def decode_ml_to_dict(telegram):
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[11]
         )
-        decoded["payload"]["channel_track"] = str(telegram[12])
+        decoded["payload"]["sourceID"] = telegram[11]
+        decoded["payload"]["channel_track"] = telegram[12]
     # remote request
     if telegram[7] == 0x20:
         decoded["payload"]["command"] = _dictsanitize(beo4_commanddict, telegram[14])
@@ -729,6 +749,7 @@ def decode_ml_to_dict(telegram):
             decoded["payload"]["source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[13]
             )
+            decoded["payload"]["sourceID"] = telegram[13]
         else:
             decoded["payload"]["subtype"] = "Undefined"
     # request local audio source
@@ -742,6 +763,7 @@ def decode_ml_to_dict(telegram):
             decoded["payload"]["source"] = _dictsanitize(
                 ml_selectedsourcedict, telegram[11]
             )
+            decoded["payload"]["sourceID"] = telegram[11]
         else:
             decoded["payload"]["subtype"] = "Undefined"
     return decoded

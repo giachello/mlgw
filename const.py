@@ -100,7 +100,8 @@ ml_command_type_dict = dict(
         (0x07, "START_VIDEO_DISTRIBUTION"),
         # EXTENDED_SOURCE_INFORMATION: message with 6 subtypes showing information about the source.
         # Printable info at byte 14 of the payload
-        # subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
+        # For Radio: 1: "" 2: Genre 3: Country 4: RDS info 5: Associated beo4 button 6: "Unknown"
+        # For A.Mem: 1: Genre 2: Album 3: Artist 4: Track name 5: Associated beo4 button 6: "Unknown"
         (0x0B, "EXTENDED_SOURCE_INFORMATION"),
         (0x96, "PC_PRESENT"),
         # PICTURE AND SOUND STATUS
@@ -209,7 +210,7 @@ beo4_commanddict = dict(
         (0x88, "Text"),
         (0x8A, "DTV"),
         (0x8B, "PC"),
-        (0x8C, "WEB"),
+        (0x8C, "Web"),
         (0x8D, "Doorcam"),
         (0x8E, "Photo"),
         (0x90, "USB2"),
@@ -218,8 +219,8 @@ beo4_commanddict = dict(
         (0x93, "N.Radio"),
         (0x94, "N.Music"),
         (0x95, "Server"),
-        (0x97, "CD2 / JOIN"),
         (0x96, "Spotify"),
+        (0x97, "CD2 / Join"),
         (0xBF, "AV"),
         (0xFA, "P-IN-P"),
         # Digits:
@@ -234,11 +235,11 @@ beo4_commanddict = dict(
         (0x08, "Digit-8"),
         (0x09, "Digit-9"),
         # Source control:
-        (0x1E, "STEP_UP"),
-        (0x1F, "STEP_DW"),
-        (0x32, "REWIND"),
-        (0x33, "RETURN"),
-        (0x34, "WIND"),
+        (0x1E, "Step Up"),
+        (0x1F, "Step Down"),
+        (0x32, "Rewind"),
+        (0x33, "Return"),
+        (0x34, "Wind"),
         (0x35, "Go / Play"),
         (0x36, "Stop"),
         (0xD4, "Yellow"),
@@ -251,8 +252,8 @@ beo4_commanddict = dict(
         (0x2A, "Format"),
         (0x44, "Sound / Speaker"),
         (0x5C, "Menu"),
-        (0x60, "Volume UP"),
-        (0x64, "Volume DOWN"),
+        (0x60, "Volume Up"),
+        (0x64, "Volume Down"),
         (0xDA, "Cinema_On"),
         (0xDB, "Cinema_Off"),
         # Other controls:
@@ -294,7 +295,7 @@ beo4_commanddict = dict(
         (0x40, "Guide"),
         (0x43, "Info"),
         # Cursor functions:
-        (0x13, "SELECT"),
+        (0x13, "Select"),
         (0xCA, "Cursor_Up"),
         (0xCB, "Cursor_Down"),
         (0xCC, "Cursor_Left"),
