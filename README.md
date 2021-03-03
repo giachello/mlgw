@@ -6,7 +6,7 @@ This component integrates Bang & Olufsen Master Link Gateway and Beolink Gateway
 
 [BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
 
-This component manages communication To and From the MLGW and Beolink Gateway and allows you to use all of the Bang & Olufsen audio and video devices as "media_player" entities in Home Assistant. It includes support for a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below). Note that Masterlink Gateway MK I is not supported because it only has a serial connection, whereas this module requires ethernet to the MLGW.
+This component manages communication with the MLGW and Beolink Gateway and allows you to use all of the Bang & Olufsen audio and video devices as "media_player" entities in Home Assistant. It uses a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below). Note that Masterlink Gateway MK I (serial connection) is not supported, this module requires ethernet to the MLGW. For newer Network Link devices, check out the [BeoPlay plugin](https://github.com/giachello/beoplay).
 
 
 ![Mini Media Player](./mini_media_player.png)
@@ -187,4 +187,10 @@ logger:
 
 * Zeroconf autoconfiguration flow
 * Timer and Clock packets unpacking
+
+## Known Issues
+
+* When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, we can only detect reliably when a speaker turns on to a specific source.
+* When a Video Master has several source (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both source at the same time and that confuses the plugin. 
+
 
