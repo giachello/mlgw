@@ -11,6 +11,7 @@ This component connects to the MasterLink and Beolink Gateway and makes all your
 
 ![Mini Media Player](./mini_media_player.png)
 
+![B&O MasterLink Gateway](./s-l1600-3.jpg)
 
 ## Installation
 
