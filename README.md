@@ -191,7 +191,7 @@ logger:
 
 ## Known Issues
 
-* When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, we can only detect reliably when a speaker turns on to a specific source.
-* When a Video Master has several source (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both source at the same time and that confuses the plugin. 
+* When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, we can only detect reliably when a speaker turns on to a source owned by a Master somewhere else.
+* When a Video Master has several sources active at the same time (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both sources at the same time and that confuses the plugin. 
 
 
