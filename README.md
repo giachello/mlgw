@@ -1,20 +1,41 @@
-# Bang & Olufsen MasterLink Gateway / BeoLink Gateway Home Assistant component
+# Bang & Olufsen MasterLink Gateway / BeoLink Gateway - Home Assistant component
 
-This components integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to the Home Assistant. 
+This component integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to Home Assistant. 
 
 [Masterlink Gateway Product Description](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/ML%20Gateway_Installation%20Guide%202v2.pdf)
 
 [BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
 
-This component manages communication To and From the MLGW and Beolink Gateway. It includes support for a special undocumented feature of the Bang & Olufsen devices that allows for functionality normally not provided even by the Bang & Olufsen official apps (see below). Note that Masterlink Gateway MK I is not supported because it only has a serial connection, whereas this module requires ethernet to the MLGW.
+This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported through the gateway, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) instead which natively supports the more advanced NL features.
+
+
+![Mini Media Player](./mini_media_player.png)
+
+![B&O MasterLink Gateway](./s-l1600-3.jpg)
 
 ## Installation
 
 Create a `mlgw` directory in `/config/custom_components/` and copy all the files in this repository into it.
 
-### Configure Home Assistant
 
-Then update your Configuration.yaml as follows (replace your specific host address and other information):
+### Automatic configuration through Add Integrations (preferred)
+
+On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
+
+The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
+
+The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Devices->Beolink and Programming->Sources) as seen in the pictures below. The sources will be reflected in the Home Assistant UI.
+
+
+![Configuration MLGW](./mlgw_configuration.png)
+
+![Configuration MLGW](./mlgw_sources_config.png)
+
+
+
+### Manual configuration through Configuration.yaml (deprecated, I'll likely remove this in the future)
+
+This is an alternative to the configuration above if you prefer manual configuration. Add to Configuration.yaml (replace with your specific setup):
 ``` 
 mlgw:
   host: 192.168.1.10
@@ -36,14 +57,9 @@ mlgw:
     - name: Bathroom
  ```
 
-
-### Configure Masterlink Gateway
-
-Add the B&O devices to the gateway and assign the MLN numbers to the devices in the same order as the devices in the HA configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
+Add the devices in the same order as the devices in the MLGW/BLGW configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
 
 If you don't set a MLN (masterlink node number) for the devices, they need to be defined in the same order as the MLGW configuration, and MLNs will be assigned sequentially, starting from 1 for the first one. For example the devices above, correspond to this configuration in the MLGW:
-
-![Configuration MLGW](./mlgw_configuration.png)
 
 
 If you need to set specific MLNs then you can change the devices section to something like this:
@@ -56,17 +72,18 @@ If you need to set specific MLNs then you can change the devices section to some
       mln: 11
 ```
 
-You can also add a room number, corresponding to your MLGW configuration.
+You can also add a room number, corresponding to your MLGW configuration, and force a Masterlink ID for a device.
 
 ```
   devices:
     - name: Living Room
       room: 9
+      id: VIDEO_MASTER
     - name: Kitchen
       room: 1
 ```
 
-Put any NL devices at the end of the list. They typically start at MLN 20.
+Put any NL devices at the end of the list. They typically start at MLN 20. If you don't the ML<>MLN will mess up and the system will not work as intended.
 
 
 ## Special Undocumented Feature: Direct Master Link Connection
@@ -116,7 +133,7 @@ There are 5 events fired by the official integration:
 | mlgw.MLGW_telegram | virtual_button | button: button number, action: (PRESS,RELEASE,HOLD) |
 | mlgw.MLGW_telegram | light_control_event | room: room number, type: (CONTROL or LIGHT), command: the BEO4 key pressed after "LIGHT" |
 | mlgw.MLGW_telegram | source_status | source_mln: device causing the event, source: the active Source (RADIO, CD, etc.), source_medium_position, source_position, source_activity: (Playing, Standby, etc.), picture_format are all information related to the specific source  |
-| mlgw.MLGW_telegram | light_control_event | source_mln: device causing the event, sound_status, speaker_mode, volume, screen1_mute, screen1_active, screen2_mute, screen2_active, cinema_mode, stereo_mode |
+| mlgw.MLGW_telegram | pict_sound_status | source_mln: device causing the event, sound_status, speaker_mode, volume, screen1_mute, screen1_active, screen2_mute, screen2_active, cinema_mode, stereo_mode |
 
 
 ### Undocumented enhanced functionality
@@ -169,6 +186,12 @@ logger:
 
 ## Not implemented / TODO
 
-* A proper config_flow to allow for UI-based configuration
+* Zeroconf autoconfiguration flow
 * Timer and Clock packets unpacking
+
+## Known Issues
+
+* When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, we can only detect reliably when a speaker turns on to a specific source.
+* When a Video Master has several source (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both source at the same time and that confuses the plugin. 
+
 
