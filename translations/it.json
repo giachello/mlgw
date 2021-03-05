@@ -6,14 +6,16 @@
         "error": {
             "cannot_connect": "Impossibile connettersi",
             "invalid_auth": "Autenticazione non valida",
-            "unknown": "Errore imprevisto"
+            "unknown": "Errore imprevisto",
+            "invalid_host": "Formato host non valido"
         },
         "step": {
             "user": {
                 "data": {
                     "host": "Host",
                     "password": "Password",
-                    "username": "Nome utente"
+                    "username": "Nome utente",
+                    "use_mllog": "Uso di funzioni non documentate del MasterLink Bus"
                 }
             }
         }

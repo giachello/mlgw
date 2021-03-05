@@ -1,8 +1,27 @@
-"""Constants for the MasterLink Gateway integration."""
+"""Constants for the MasterLink Gateway integration.
+
+Key references:
+
+http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/
+https://tidsskrift.dk/daimipb/article/download/7043/6004/0
+
+
+Thanks to https://github.com/Lele-72 for discovering a lot of the more arcane commands!
+
+
+
+
+"""
 
 DOMAIN = "mlgw"
 MLGW_GATEWAY = "MLGW_GATEWAY"
 MLGW_DEVICES = "MLGW_DEVICES"
+MLGW_GATEWAY_CONFIGURATION_DATA = "MLGW_GATEWAY_CONFIG_DATA"
+
+# ##### Requests data
+BASE_URL = "http://{0}/{1}"
+MLGW_CONFIG_JSON_PATH = "mlgwpservices.json"
+TIMEOUT = 5.0
 
 
 # ########################################################################################
@@ -23,6 +42,7 @@ MLGW_AVAILABLE_SOURCES = ["CD", "RADIO", "A.MEM"]
 CONF_MLGW_DEVICE_NAME = "name"
 CONF_MLGW_DEVICE_MLN = "mln"
 CONF_MLGW_DEVICE_ROOM = "room"
+CONF_MLGW_DEVICE_MLID = "id"
 # this is an undocumented feature of the MasterLink Gateway that provides complete access to the ML data bus,
 # so that the integration can listen to all events running on the bus and provide enhanced functionality.
 # if you decide to use it, then Username must be 'admin' and password must be the admin password.
@@ -31,49 +51,66 @@ CONF_MLGW_USE_MLLOG = "use_mllog"
 # ########################################################################################
 # ##### MasterLink (not MLGW)  Protocol packet constants
 
+
 ml_telegram_type_dict = dict(
     [
         (0x0A, "COMMAND"),
         (0x0B, "REQUEST"),
-        (0x14, "STATUS"),
+        (0x14, "RESPONSE"),
         (0x2C, "INFO"),
-        (0x40, "TIME"),
-        (0x5E, "CONFIG"),
     ]
 )
 
 ml_command_type_dict = dict(
     [
         (0x04, "MASTER_PRESENT"),
-        (0x06, "DISPLAY_SOURCE"),
-        (0x08, "AUDIO_BUS"),  # subtypes seen 01:request status 04:status_not_distributing 06:status_distributing (len 04 or 05)
-        (0x0B, "META_DATA"),
+        # REQUEST_DISTRIBUTED_SOURCE: seen when a device asks what source is being distributed
+        # subtypes seen 01:request 04:no source 06:has source (byte 13 is source)
+        (0x08, "REQUEST_DISTRIBUTED_SOURCE"),
         (0x0D, "BEO4_KEY"),
         (0x10, "STANDBY"),
-        (0x11, "RELEASE"),
+        (0x11, "RELEASE"),  # when a device turns off
         (0x20, "MLGW_REMOTE_BEO4"),
-        (0x30, "WHAT_AUDIO_SOURCE"),  # subtypes seen 02:request 04:response
+        # REQUEST_LOCAL_SOURCE: Seen when a device asks what source is playing locally to a device
+        # subtypes seen 02:request 04:no source 05:secondary source 06:primary source (byte 11 is source)
+        # byte 10 is bitmask for distribution: 0x01: coaxial cable - 0x02: MasterLink ML_BUS - 0x08: local screen
+        (0x30, "REQUEST_LOCAL_SOURCE"),
         (0x3C, "TIMER"),
         (0x40, "CLOCK"),
         (0x44, "TRACK_INFO"),
+        # LOCK_MANAGER_COMMAND: Lock to Determine what device issues source commands
+        # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
         (0x45, "GOTO_SOURCE"),
-        (0x5C, "REQUEST_KEY"),
+        (0x5C, "LOCK_MANAGER_COMMAND"),
+        (0x5E, "CONFIGURATION"),
         (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
+        # Source Status
+        # byte 10:source - byte 18,19: channel/track - byte 21:activity - byte 17: source medium - byte 23: picture identifiedr
+        # Byte 13: 80 when DTV is turned off. 00 when it's on
         (0x87, "STATUS_INFO"),
-        (0x94, "DVD_STATUS_INFO"),
+        (0x94, "VIDEO_TRACK_INFO"),
+        #
+        # -----------------------------------------------------------------------
+        # More packets that we see on the bus, with a guess of the type
+        # DISPLAY_SOURCE: Message sent with a payload showing the displayed source name.
+        # subtype 3 has the printable source name starting at byte 10 of the payload
+        (0x06, "DISPLAY_SOURCE"),
+        # START_VIDEO_DISTRIBUTION: Sent when a locally playing source starts being distributed on coaxial cable
+        (0x07, "START_VIDEO_DISTRIBUTION"),
+        # EXTENDED_SOURCE_INFORMATION: message with 6 subtypes showing information about the source.
+        # Printable info at byte 14 of the payload
+        # For Radio: 1: "" 2: Genre 3: Country 4: RDS info 5: Associated beo4 button 6: "Unknown"
+        # For A.Mem: 1: Genre 2: Album 3: Artist 4: Track name 5: Associated beo4 button 6: "Unknown"
+        (0x0B, "EXTENDED_SOURCE_INFORMATION"),
         (0x96, "PC_PRESENT"),
-        (0x98, "PICTURE_STATUS_INFO"),
-        # more packets that we see on the bus, with a guess of the type
-        #(
-        #    0x06,
-        #    "DISPLAY_SOURCE",
-        #),  # Message sent with a payload showing the displayed source name. subtype 3 has the printable source name starting at byte 10 of teh payload
-        #(
-        #    0x0B,
-        #    "EXTENDED_SOURCE_INFORMATION",
-        #),  # message sent with 6 subtypes showing information about the source. printable info at byte 14 of the payload subtypes seen: 1: ?? 2: genre 3: country 4: RDS info 5: "NESSUNO" 6: "Unknown"
-        #(0x98, "PICTURE_STATUS_INFO"),
+        # PICTURE AND SOUND STATUS
+        # byte 0: bit 0-1: sound status - bit 2-3: stereo mode (can be 0 in a 5.1 setup)
+        # byte 1: speaker mode (see below)
+        # byte 2: audio volume
+        # byte 3: picture format identifier (see below)
+        # byte 4: bit 0: screen1 mute - bit 1: screen2 mute - bit 2: screen1 active - bit 3: screen2 active - bit 4: cinema mode
+        (0x98, "PICT_SOUND_STATUS"),
     ]
 )
 
@@ -81,27 +118,31 @@ ml_command_type_request_key_subtype_dict = dict(
     [
         (0x01, "Request Key"),
         (0x02, "Transfer Key"),
+        (0x03, "Transfer Impossible"),
         (0x04, "Key Received"),
+        (0x05, "Timeout"),
         (0xFF, "Undefined"),
     ]
 )
 
 ml_state_dict = dict(
     [
-        (0x00, "UNKNOWN"),
-        (0x01, "STOP"),
-        (0x02, "PLAYING"),
-        (0x03, "WIND"),
-        (0x04, "REWIND"),
-        (0x05, "RECORD_LOCK"),
-        (0x06, "STANDBY"),
-        (0x07, "NO_MEDIUM"),
-        (0x08, "STILL_PICTURE"),
-        (0x14, "SCAN_FORWARD"),
-        (0x15, "SCAN_REVERSE"),
-        (0xFF, "BLANK_STATUS"),
+        (0x00, "Unknown"),
+        (0x01, "Stop"),
+        (0x02, "Playing"),
+        (0x03, "Fast Forward"),
+        (0x04, "Rewind"),
+        (0x05, "Record Lock"),
+        (0x06, "Standby"),
+        (0x07, "Load / No Media"),
+        (0x08, "Still Picture"),
+        (0x14, "Scan Forward"),
+        (0x15, "Scan Reverse"),
+        (0xFF, "Blank Status"),
     ]
 )
+
+mlgw_sourceactivitydict = ml_state_dict
 
 ml_pictureformatdict = dict(
     [
@@ -134,17 +175,17 @@ ml_selectedsourcedict = dict(
         (0x00, "NONE"),
         (0x0B, "TV"),
         (0x15, "V.MEM"),
-        (0x16, "DVD_2"),
+        (0x16, "DVD2"),
         (0x1F, "DTV"),
         (0x29, "DVD"),
-        (0x33, "V_AUX"),
-        (0x3E, "V_AUX2"),
+        (0x33, "V.AUX"),
+        (0x3E, "DOORCAM"),
         (0x47, "PC"),
         (0x6F, "RADIO"),
         (0x79, "A.MEM"),
         (0x7A, "N.MUSIC"),
         (0x8D, "CD"),
-        (0x97, "A_AUX"),
+        (0x97, "A.AUX"),
         (0xA1, "N.RADIO"),
         #  Dummy for 'Listen for all sources'
         (0xFE, "<ALL>"),  # have also seen 0xFF as "all"
@@ -160,8 +201,8 @@ beo4_commanddict = dict(
         (0x47, "Sleep"),
         (0x80, "TV"),
         (0x81, "Radio"),
-        (0x82, "DTV2"),
-        (0x83, "Aux_A"),
+        (0x82, "V.Aux"),
+        (0x83, "A.Aux"),
         (0x84, "Media"),
         (0x85, "V.Mem"),
         (0x86, "DVD"),
@@ -169,7 +210,7 @@ beo4_commanddict = dict(
         (0x88, "Text"),
         (0x8A, "DTV"),
         (0x8B, "PC"),
-        (0x8C, "WEB"),
+        (0x8C, "Web"),
         (0x8D, "Doorcam"),
         (0x8E, "Photo"),
         (0x90, "USB2"),
@@ -178,10 +219,10 @@ beo4_commanddict = dict(
         (0x93, "N.Radio"),
         (0x94, "N.Music"),
         (0x95, "Server"),
-        (0x97, "Join"),
         (0x96, "Spotify"),
+        (0x97, "CD2 / Join"),
         (0xBF, "AV"),
-        (0xFA, "P-AND-P"),
+        (0xFA, "P-IN-P"),
         # Digits:
         (0x00, "Digit-0"),
         (0x01, "Digit-1"),
@@ -194,11 +235,11 @@ beo4_commanddict = dict(
         (0x08, "Digit-8"),
         (0x09, "Digit-9"),
         # Source control:
-        (0x1E, "STEP_UP"),
-        (0x1F, "STEP_DW"),
-        (0x32, "REWIND"),
-        (0x33, "RETURN"),
-        (0x34, "WIND"),
+        (0x1E, "Step Up"),
+        (0x1F, "Step Down"),
+        (0x32, "Rewind"),
+        (0x33, "Return"),
+        (0x34, "Wind"),
         (0x35, "Go / Play"),
         (0x36, "Stop"),
         (0xD4, "Yellow"),
@@ -211,8 +252,8 @@ beo4_commanddict = dict(
         (0x2A, "Format"),
         (0x44, "Sound / Speaker"),
         (0x5C, "Menu"),
-        (0x60, "Volume UP"),
-        (0x64, "Volume DOWN"),
+        (0x60, "Volume Up"),
+        (0x64, "Volume Down"),
         (0xDA, "Cinema_On"),
         (0xDB, "Cinema_Off"),
         # Other controls:
@@ -254,15 +295,14 @@ beo4_commanddict = dict(
         (0x40, "Guide"),
         (0x43, "Info"),
         # Cursor functions:
-        (0x13, "SELECT"),
+        (0x13, "Select"),
         (0xCA, "Cursor_Up"),
         (0xCB, "Cursor_Down"),
         (0xCC, "Cursor_Left"),
         (0xCD, "Cursor_Right"),
-        #
+        # Light / Control commands
         (0x9B, "Light"),
         (0x9C, "Command"),
-        # Light Timeout
         (0x58, "Light Timeout"),
         #  Dummy for 'Listen for all commands'
         (0xFF, "<all>"),
@@ -303,18 +343,6 @@ MLGW_PL = {v.upper(): k for k, v in mlgw_payloadtypedict.items()}
 
 
 mlgw_virtualactiondict = dict([(0x01, "PRESS"), (0x02, "HOLD"), (0x03, "RELEASE")])
-
-mlgw_sourceactivitydict = dict(
-    [
-        (0x00, "Unknown"),
-        (0x01, "Stop"),
-        (0x02, "Playing"),
-        (0x03, "Wind"),
-        (0x04, "Rewind"),
-        (0x05, "Record lock"),
-        (0x06, "Standby"),
-    ]
-)
 
 ### for '0x03: Picture and Sound Status'
 mlgw_soundstatusdict = dict([(0x00, "Not muted"), (0x01, "Muted")])
