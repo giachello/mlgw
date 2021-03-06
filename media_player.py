@@ -349,12 +349,7 @@ class BeoSpeaker(MediaPlayerEntity):
         self._sources = sources
 
         # information on the current track
-        self._media_track = None
-        self._media_title = None
-        self._media_artist = None
-        self._media_album_name = None
-        self._media_album_artist = None
-        self._media_channel = None
+        self.clear_media_info()
 
         # set up a listener for "RELEASE" and "GOTO_SOURCE" commands associated with this speaker to
         # adjust the state. "All Standby" command is managed directly in the MLGW listener in MasterlinkGateway
@@ -365,12 +360,7 @@ class BeoSpeaker(MediaPlayerEntity):
                     if _event.data["payload_type"] == "RELEASE":
                         _LOGGER.info("ML LOG said: RELEASE id %s" % (self._ml))
                         self._pwon = False
-                        self._media_track = None
-                        self._media_title = None
-                        self._media_artist = None
-                        self._media_album_name = None
-                        self._media_album_artist = None
-                        self._media_channel = None
+                        self.clear_media_info()
                     elif _event.data["payload_type"] == "GOTO_SOURCE":
                         _LOGGER.info(
                             "ML LOG said: GOTO_SOURCE %s on device %s"
@@ -378,6 +368,7 @@ class BeoSpeaker(MediaPlayerEntity):
                         )
                         # reflect that the device is on and store the requested source
                         self._pwon = True
+                        self.clear_media_info()
                         # find the source based on the source ID
                         _s = _event.data["payload"]["sourceID"]
                         for _x in self._sources:
@@ -392,6 +383,7 @@ class BeoSpeaker(MediaPlayerEntity):
                         and _event.data["payload"]["subtype"] == "Change Source"
                     ):
                         # find the source based on the source ID
+                        self.clear_media_info()
                         _s = _event.data["payload"]["sourceID"]
                         for _x in self._sources:
                             if _x["statusID"] == _s or _x[
@@ -407,12 +399,7 @@ class BeoSpeaker(MediaPlayerEntity):
                 # handle the extended source information and fill in some info for the UI
                 if _event.data["to_device"] == "ALL_LINK_DEVICES":
                     if _event.data["payload_type"] == "EXTENDED_SOURCE_INFORMATION":
-                        self._media_track = None
-                        self._media_title = None
-                        self._media_artist = None
-                        self._media_album_name = None
-                        self._media_album_artist = None
-                        self._media_channel = None
+                        self.clear_media_info()
                         if _event.data["payload"]["info_type"] == 2:
                             self._media_album_name = _event.data["payload"][
                                 "info_value"
@@ -430,6 +417,14 @@ class BeoSpeaker(MediaPlayerEntity):
     def __del__(self):
         if self._gateway._connectedML:
             self._stop_listening()
+
+    def clear_media_info(self):
+        self._media_track = None
+        self._media_title = None
+        self._media_artist = None
+        self._media_album_name = None
+        self._media_album_artist = None
+        self._media_channel = None
 
     @property
     def name(self):
