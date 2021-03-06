@@ -61,6 +61,7 @@ from homeassistant.components.media_player.const import (
     SUPPORT_PREVIOUS_TRACK,
     SUPPORT_NEXT_TRACK,
     SUPPORT_PLAY,
+    SUPPORT_PAUSE,
     SUPPORT_SHUFFLE_SET,
     SUPPORT_REPEAT_SET,
 )
@@ -75,6 +76,7 @@ SUPPORT_BEO = (
     | SUPPORT_NEXT_TRACK
     | SUPPORT_STOP
     | SUPPORT_PLAY
+    | SUPPORT_PAUSE
     | SUPPORT_SHUFFLE_SET
     | SUPPORT_REPEAT_SET
 )
@@ -617,6 +619,15 @@ class BeoSpeaker(MediaPlayerEntity):
         )
 
     def media_stop(self):
+        """Send stop command."""
+        dest = self._sources[self._source_names.index(self._source)]["destination"]
+        self._gateway.mlgw_send_beo4_cmd(
+            self._mln,
+            dest,
+            BEO4_CMDS.get("STOP"),
+        )
+
+    def media_pause(self):
         """Send stop command."""
         dest = self._sources[self._source_names.index(self._source)]["destination"]
         self._gateway.mlgw_send_beo4_cmd(
