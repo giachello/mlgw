@@ -115,9 +115,9 @@ The integration also forwards events to Home Assistant that you can use for your
 
 The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light commands, Control commands, Picture and Sound Status, Source Status, and "All Standby". 
 
-The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to the bus. An easy way to see what's getting fired is to use the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page.
+The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
-For example, if the user selects LIGHT-1 on their Beo4 or BeoOne remote control, the command will flow through as an Event to Home assistant which you can use to control your lights.
+For example, if the user selects `LIGHT-1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
 
 The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
 
