@@ -1,6 +1,7 @@
 {
   "domain": "mlgw",
   "name": "MasterLink Gateway",
+  "version" : "2021.3.0",
   "config_flow": true,
   "documentation": "https://github.com/giachello/mlgw",
   "requirements": [],

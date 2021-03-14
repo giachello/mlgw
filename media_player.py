@@ -134,7 +134,7 @@ async def async_setup_entry(
         if (
             _event.data["from_device"] == "MLGW"
             and _event.data["payload_type"] == "MLGW_REMOTE_BEO4"
-            and _event.data["payload"]["command"] == "<all>"
+            and _event.data["payload"]["command"] == "Light Timeout"
         ):
             _LOGGER.info(
                 "ML LOG returned ML id %s for MLN %s"
@@ -180,7 +180,7 @@ async def async_setup_entry(
                     gateway.mlgw_send_beo4_cmd(
                         beospeaker._mln,
                         reverse_ml_destselectordict.get("AUDIO SOURCE"),
-                        BEO4_CMDS.get("<ALL>"),
+                        BEO4_CMDS.get("LIGHT TIMEOUT"),
                     )
 
         async_add_entities(mp_devices, True)
@@ -220,7 +220,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
         if (
             _event.data["from_device"] == "MLGW"
             and _event.data["payload_type"] == "MLGW_REMOTE_BEO4"
-            and _event.data["payload"]["command"] == "<all>"
+            and _event.data["payload"]["command"] == "Light Timeout"
         ):
             _LOGGER.info(
                 "ML LOG returned ML id %s for MLN %s"
@@ -286,7 +286,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
                 gateway.mlgw_send_beo4_cmd(
                     beospeaker._mln,
                     reverse_ml_destselectordict.get("AUDIO SOURCE"),
-                    BEO4_CMDS.get("<ALL>"),
+                    BEO4_CMDS.get("LIGHT TIMEOUT"),
                 )
 
         add_devices(mp_devices)
@@ -510,6 +510,9 @@ class BeoSpeaker(MediaPlayerEntity):
                 source
             ):
                 self._source = _x["name"]
+                return
+
+        _LOGGER.debug("BeoSpeaker: set_source %s unknown on device %s" % (source, self._name))
 
     def turn_on(self):
         # when turning on this speaker, use the last known source active on beolink
