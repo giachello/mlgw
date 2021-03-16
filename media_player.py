@@ -61,6 +61,7 @@ from homeassistant.components.media_player.const import (
     SUPPORT_PREVIOUS_TRACK,
     SUPPORT_NEXT_TRACK,
     SUPPORT_PLAY,
+    SUPPORT_PAUSE,
     SUPPORT_SHUFFLE_SET,
     SUPPORT_REPEAT_SET,
 )
@@ -75,6 +76,7 @@ SUPPORT_BEO = (
     | SUPPORT_NEXT_TRACK
     | SUPPORT_STOP
     | SUPPORT_PLAY
+    | SUPPORT_PAUSE
     | SUPPORT_SHUFFLE_SET
     | SUPPORT_REPEAT_SET
 )
@@ -132,7 +134,7 @@ async def async_setup_entry(
         if (
             _event.data["from_device"] == "MLGW"
             and _event.data["payload_type"] == "MLGW_REMOTE_BEO4"
-            and _event.data["payload"]["command"] == "<all>"
+            and _event.data["payload"]["command"] == "Light Timeout"
         ):
             _LOGGER.info(
                 "ML LOG returned ML id %s for MLN %s"
@@ -178,7 +180,7 @@ async def async_setup_entry(
                     gateway.mlgw_send_beo4_cmd(
                         beospeaker._mln,
                         reverse_ml_destselectordict.get("AUDIO SOURCE"),
-                        BEO4_CMDS.get("<ALL>"),
+                        BEO4_CMDS.get("LIGHT TIMEOUT"),
                     )
 
         async_add_entities(mp_devices, True)
@@ -218,7 +220,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
         if (
             _event.data["from_device"] == "MLGW"
             and _event.data["payload_type"] == "MLGW_REMOTE_BEO4"
-            and _event.data["payload"]["command"] == "<all>"
+            and _event.data["payload"]["command"] == "Light Timeout"
         ):
             _LOGGER.info(
                 "ML LOG returned ML id %s for MLN %s"
@@ -284,7 +286,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
                 gateway.mlgw_send_beo4_cmd(
                     beospeaker._mln,
                     reverse_ml_destselectordict.get("AUDIO SOURCE"),
-                    BEO4_CMDS.get("<ALL>"),
+                    BEO4_CMDS.get("LIGHT TIMEOUT"),
                 )
 
         add_devices(mp_devices)
@@ -347,12 +349,7 @@ class BeoSpeaker(MediaPlayerEntity):
         self._sources = sources
 
         # information on the current track
-        self._media_track = None
-        self._media_title = None
-        self._media_artist = None
-        self._media_album_name = None
-        self._media_album_artist = None
-        self._media_channel = None
+        self.clear_media_info()
 
         # set up a listener for "RELEASE", "STATUS_INFO" and "GOTO_SOURCE" commands associated with this speaker to
         # adjust the state. "All Standby" command is managed directly in the MLGW listener in MasterlinkGateway
@@ -363,12 +360,8 @@ class BeoSpeaker(MediaPlayerEntity):
                     if _event.data["payload_type"] == "RELEASE":
                         _LOGGER.info("ML LOG said: RELEASE id %s" % (self._ml))
                         self._pwon = False
-                        self._media_track = None
-                        self._media_title = None
-                        self._media_artist = None
-                        self._media_album_name = None
-                        self._media_album_artist = None
-                        self._media_channel = None
+
+                        self.clear_media_info()
                     elif (
                         _event.data["payload_type"] == "GOTO_SOURCE"
                     ) or (
@@ -389,6 +382,7 @@ class BeoSpeaker(MediaPlayerEntity):
                     ):
                         # reflect that the device is on and store the requested source
                         self._pwon = True
+                        self.clear_media_info()
                         # find the source based on the source ID
                         _s = _event.data["payload"]["sourceID"]
                         for _x in self._sources:
@@ -413,6 +407,7 @@ class BeoSpeaker(MediaPlayerEntity):
                         and _event.data["payload"]["subtype"] == "Change Source"
                     ):
                         # find the source based on the source ID
+                        self.clear_media_info()
                         _s = _event.data["payload"]["sourceID"]
                         for _x in self._sources:
                             if _x["statusID"] == _s or _x[
@@ -428,12 +423,7 @@ class BeoSpeaker(MediaPlayerEntity):
                 # handle the extended source information and fill in some info for the UI
                 if _event.data["to_device"] == "ALL_LINK_DEVICES":
                     if _event.data["payload_type"] == "EXTENDED_SOURCE_INFORMATION":
-                        self._media_track = None
-                        self._media_title = None
-                        self._media_artist = None
-                        self._media_album_name = None
-                        self._media_album_artist = None
-                        self._media_channel = None
+                        self.clear_media_info()
                         if _event.data["payload"]["info_type"] == 2:
                             self._media_album_name = _event.data["payload"][
                                 "info_value"
@@ -451,6 +441,14 @@ class BeoSpeaker(MediaPlayerEntity):
     def __del__(self):
         if self._gateway._connectedML:
             self._stop_listening()
+
+    def clear_media_info(self):
+        self._media_track = None
+        self._media_title = None
+        self._media_artist = None
+        self._media_album_name = None
+        self._media_album_artist = None
+        self._media_channel = None
 
     @property
     def name(self):
@@ -536,6 +534,9 @@ class BeoSpeaker(MediaPlayerEntity):
                 source
             ):
                 self._source = _x["name"]
+                return
+
+        _LOGGER.debug("BeoSpeaker: set_source %s unknown on device %s" % (source, self._name))
 
     def turn_on(self):
         # when turning on this speaker, use the last known source active on beolink
@@ -640,6 +641,15 @@ class BeoSpeaker(MediaPlayerEntity):
         )
 
     def media_stop(self):
+        """Send stop command."""
+        dest = self._sources[self._source_names.index(self._source)]["destination"]
+        self._gateway.mlgw_send_beo4_cmd(
+            self._mln,
+            dest,
+            BEO4_CMDS.get("STOP"),
+        )
+
+    def media_pause(self):
         """Send stop command."""
         dest = self._sources[self._source_names.index(self._source)]["destination"]
         self._gateway.mlgw_send_beo4_cmd(

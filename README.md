@@ -59,10 +59,9 @@ mlgw:
 
 Add the devices in the same order as the devices in the MLGW/BLGW configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
 
-If you don't set a MLN (masterlink node number) for the devices, they need to be defined in the same order as the MLGW configuration, and MLNs will be assigned sequentially, starting from 1 for the first one. For example the devices above, correspond to this configuration in the MLGW:
+If you don't set a MLN (masterlink node number) for the devices, they need to be defined in the same order as the MLGW configuration, and MLNs will be assigned sequentially, starting from 1 for the first one. For example, the yaml configuration above, correspond to the MLGW configuration in the picture above. 
 
-
-If you need to set specific MLNs then you can change the devices section to something like this:
+If you want to set specific MLNs then you can change the devices section to something like this. Note that if you give wrong MLNs the plugin won't work or might operate the wrong device.
 
 ```
   devices:
@@ -116,9 +115,9 @@ The integration also forwards events to Home Assistant that you can use for your
 
 The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light commands, Control commands, Picture and Sound Status, Source Status, and "All Standby". 
 
-The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to the bus. An easy way to see what's getting fired is to use the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page.
+The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
-For example, if the user selects LIGHT-1 on their Beo4 or BeoOne remote control, the command will flow through as an Event to Home assistant which you can use to control your lights.
+For example, if the user selects `LIGHT-1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
 
 The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
 
@@ -169,7 +168,7 @@ There are too many ML telegram types to document here (and a lot are undocumente
 | mlgw.ML_telegram | STANDBY | from_device, to_device |  | Device turns off |
 | mlgw.ML_telegram | BEO4_KEY | from_device, to_device | source, command  | Beo4 key pressed on a speaker | 
 | mlgw.ML_telegram | TIMER | from_device, to_device |  | Timer functionality invoked |
-| mlgw.ML_telegram | MLGW REMOTE BEO4 | from_device, to_device | command, dest_selector  | issued when an external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
+| mlgw.ML_telegram | MLGW_REMOTE_BEO4 | from_device, to_device | command, dest_selector | issued when an external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
 | mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the Radio or CD track that is playing | 
 
 
@@ -191,7 +190,7 @@ logger:
 
 ## Known Issues
 
-* When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, we can only detect reliably when a speaker turns on to a specific source.
-* When a Video Master has several source (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both source at the same time and that confuses the plugin. 
+* When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, we can only detect reliably when a speaker turns on to a source owned by a Master somewhere else.
+* When a Video Master has several sources active at the same time (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both sources at the same time and that confuses the plugin. 
 
 
