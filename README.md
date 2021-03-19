@@ -98,9 +98,9 @@ The integration works also without this feature, but it's much better with it.
 
 ## Using the integration
 
-### Speakers and Bang Olufsen Sources
+### Speakers and Bang & Olufsen Sources
 
-Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can integrate in your normal lovelace interface. I use [mini media player ](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and sources from your Home Assistant dashboard.
+Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can integrate in your normal lovelace interface. I use [mini media player ](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and turn on the B&O sources from your Home Assistant dashboard.
 
 ![Mini Media Player](./mini_media_player.png)
 
@@ -113,13 +113,13 @@ The integration also forwards events to Home Assistant that you can use for your
 
 ### MasterLink Gateway official commands: Lights and Virtual Buttons
 
-The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light commands, Control commands, Picture and Sound Status, Source Status, and "All Standby". 
+The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby". 
 
 The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
 For example, if the user selects `LIGHT-1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
 
-The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
+The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off Spotify streaming:
 
 
 ![All Standby Event](./all_standby_event.png)
@@ -145,7 +145,7 @@ The enhanced Undocumented Feature forwards *ALL* MasterLink events that happen o
 
 The possibilities are endless. You can see a few examples here: [https://github.com/giachello/mlgw/blob/main/example_automations.yaml](example_automations.yaml). An easy way to see what goes on the ML bus is using the "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.ML_telegram` in the field on the bottom of the page.
 
-For example the following setup catches a key event on the Beo4 remote.
+For example the following setup catches the Green key event on the Beo4 remote.
 
 ![BEO4 key event](./beo4_key_event.png)
 
