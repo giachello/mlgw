@@ -82,7 +82,7 @@ You can also add a room number, corresponding to your MLGW configuration, and fo
       room: 1
 ```
 
-Put any NL devices at the end of the list. They typically start at MLN 20. If you don't the ML<>MLN will mess up and the system will not work as intended.
+Put any Network Link devices at the end of the list. They typically start at MLN 20. If you don't, the Direct Master Link Connection feature will get confused and the system will not work as intended.
 
 
 ## Special Undocumented Feature: Direct Master Link Connection
@@ -91,7 +91,7 @@ This integration uses a special undocumented feature of the Master Link Gateway 
 
 It allows all kinds of fun integrations. For example you can start and control your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
 
-For this to work, you must use **'username: admin'**, and the admin password as credentials form the MLGW, because normal users do not have access to the feature. Also, set **'use_mllog: true'** in the configuration.
+For this to work, you must use **'username: admin'**, and the admin password as credentials for the MLGW and set **'use_mllog: true'** in the configuration.
 
 The integration works also without this feature, but it's much better with it.
 
