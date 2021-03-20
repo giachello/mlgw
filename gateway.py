@@ -224,6 +224,7 @@ class MasterLinkGateway:
                                 encoded_telegram["to_mln"] = x._mln
 
                     # if a GOTO Source telegram is received, set the beolink source to it
+                    # this only tracks the primary beolink source, doesn't track local sources
                     if encoded_telegram["payload_type"] == "GOTO_SOURCE":
                         self._beolink_source = encoded_telegram["payload"]["source"]
 
@@ -423,7 +424,7 @@ class MasterLinkGateway:
                     decoded["picture_format"] = pictureFormat
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
                     # remember the new source
-                    if sourceActivity != "Standby":
+                    if sourceActivity != "Standby" and sourceActivity != "Unknown":
                         self._beolink_source = beolink_source
                     # change the source of the MLN
                     # reporting the change
@@ -431,6 +432,7 @@ class MasterLinkGateway:
                     sourcePositionInt = response[8] * 256 + response[9]
                     if (
                         sourceActivity != "Standby"
+                        and sourceActivity != "Unknown"
                         and sourcePositionInt > 0
                         and self._devices is not None
                     ):
@@ -645,18 +647,21 @@ def decode_ml_to_dict(telegram):
     decoded["payload"] = dict()
 
     # source status info
-    # TTFF__TYDSOS__PTLLPS SR____________SLSHTR__AC__PI________________________TRTR______
+    # TTFF__TYDSOS__PTLLPS SR____DO______SLSHTR__ACSTPI________________________TRTR______
     if telegram[7] == 0x87:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
         decoded["payload"]["sourceID"] = telegram[10]
+        decoded["payload"]["DTV_off"] = telegram[13]
+        decoded["payload"]["source_medium"] = _hexword(telegram[18], telegram[17])
         decoded["payload"]["channel_track"] = telegram[19]
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[21])
-        decoded["payload"]["source_medium"] = _hexword(telegram[18], telegram[17])
+        decoded["payload"]["source_type"] = telegram[22]
         decoded["payload"]["picture_identifier"] = _dictsanitize(
             ml_pictureformatdict, telegram[23]
         )
+
     # display source information
     if telegram[7] == 0x06:
         _s = ""

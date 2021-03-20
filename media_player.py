@@ -358,10 +358,12 @@ class BeoSpeaker(MediaPlayerEntity):
             if self._ml is not None:
                 if _event.data["from_device"] == self._ml:
                     if _event.data["payload_type"] == "RELEASE":
+                        # I am telling the system I am turning off
                         _LOGGER.info("ML LOG said: RELEASE id %s" % (self._ml))
                         self._pwon = False
                         self.clear_media_info()
                     elif _event.data["payload_type"] == "GOTO_SOURCE":
+                        # I am telling the system I want a source
                         _LOGGER.info(
                             "ML LOG said: GOTO_SOURCE %s on device %s"
                             % (_event.data["payload"]["source"], self._ml)
@@ -369,27 +371,28 @@ class BeoSpeaker(MediaPlayerEntity):
                         # reflect that the device is on and store the requested source
                         self._pwon = True
                         self.clear_media_info()
-                        # find the source based on the source ID
-                        _s = _event.data["payload"]["sourceID"]
-                        for _x in self._sources:
-                            if _x["statusID"] == _s or _x[
-                                "selectID"
-                            ] == statusID_to_selectID(_s):
-                                self._source = _x["name"]
+                        self.set_source(_event.data["payload"]["sourceID"])
+                    elif (
+                        _event.data["payload_type"] == "STATUS_INFO"
+                        and self._ml == "VIDEO_MASTER"
+                    ):
+                        # special case I am a Video Master and my source status info changes
+                        if _event.data["to_device"] == "MLGW" or (
+                            _event.data["channel_track"] > 0
+                            and _event.data["DTV_off"] == 0x00
+                        ):
+                            self.clear_media_info()
+                            self.set_source(_event.data["payload"]["sourceID"])
+                        elif _event.data["DTV_off"] == 0x80:
+                            self.set_state(STATE_OFF)
 
                 if _event.data["to_device"] == self._ml:
                     if (  # I'm being told to change source
                         _event.data["payload_type"] == "TRACK_INFO"
                         and _event.data["payload"]["subtype"] == "Change Source"
                     ):
-                        # find the source based on the source ID
                         self.clear_media_info()
-                        _s = _event.data["payload"]["sourceID"]
-                        for _x in self._sources:
-                            if _x["statusID"] == _s or _x[
-                                "selectID"
-                            ] == statusID_to_selectID(_s):
-                                self._source = _x["name"]
+                        self.set_source(_event.data["payload"]["sourceID"])
                     elif _event.data["payload_type"] == "TRACK_INFO_LONG":
                         if _event.data["payload"]["channel_track"] > 0:
                             self._media_track = _event.data["payload"]["channel_track"]
@@ -501,6 +504,7 @@ class BeoSpeaker(MediaPlayerEntity):
             self._pwon = True
         elif _state == STATE_OFF:
             self._pwon = False
+            self.clear_media_info()
 
     def set_source(self, source):
         # to be called by the gateway to set the source (the source is a statusID e.g., radio=0x6f)

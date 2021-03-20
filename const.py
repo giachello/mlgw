@@ -94,8 +94,9 @@ ml_command_type_dict = dict(
         (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
         # Source Status
-        # byte 10:source - byte 18,19: channel/track - byte 21:activity - byte 17: source medium - byte 23: picture identifiedr
-        # Byte 13: 80 when DTV is turned off. 00 when it's on
+        # byte 10:source - byte 13: 80 when DTV is turned off. 00 when it's on
+        # byte 18H 17L: source medium - byte 19: channel/track - byte 21:activity
+        # byte 22: 01: audio source 02: video source ff:undefined - byte 23: picture identifier
         (0x87, "STATUS_INFO"),
         (0x94, "VIDEO_TRACK_INFO"),
         #
