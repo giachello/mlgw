@@ -512,7 +512,9 @@ class BeoSpeaker(MediaPlayerEntity):
                 self._source = _x["name"]
                 return
 
-        _LOGGER.debug("BeoSpeaker: set_source %s unknown on device %s" % (source, self._name))
+        _LOGGER.debug(
+            "BeoSpeaker: set_source %s unknown on device %s" % (source, self._name)
+        )
 
     def turn_on(self):
         # when turning on this speaker, use the last known source active on beolink
@@ -529,6 +531,10 @@ class BeoSpeaker(MediaPlayerEntity):
             self.select_source(self._source)
         elif len(self._source_names) > 0:
             self.select_source(self._source_names[0])
+        _LOGGER.debug(
+            "BeoSpeaker: turn on failed %s %s %s"
+            % (self._gateway.beolink_source, self._source, self._source_names[0])
+        )
 
     # An alternate is to turn on with volume up which for most devices, turns it on without changing source, but it does nothing on the BeoSound system.
     #        self._pwon = True
@@ -536,12 +542,7 @@ class BeoSpeaker(MediaPlayerEntity):
 
     def turn_off(self):
         self._pwon = False
-        self._media_track = None
-        self._media_title = None
-        self._media_artist = None
-        self._media_album_name = None
-        self._media_album_artist = None
-        self._media_channel = None
+        self.clear_media_info()
         self._gateway.mlgw_send_beo4_cmd(
             self._mln,
             reverse_ml_destselectordict.get("AUDIO SOURCE"),
@@ -551,6 +552,7 @@ class BeoSpeaker(MediaPlayerEntity):
     def select_source(self, source):
         # look up the full information record for the source
         try:
+            _LOGGER.debug("BeoSpeaker: trying to select source: %s", source)
             source_info = self._sources[self._source_names.index(source)]
 
             self._pwon = True

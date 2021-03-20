@@ -48,6 +48,14 @@ CONF_MLGW_DEVICE_MLID = "id"
 # if you decide to use it, then Username must be 'admin' and password must be the admin password.
 CONF_MLGW_USE_MLLOG = "use_mllog"
 
+
+# ########################################################################################
+# ##### Services
+
+ATTR_MLGW_BUTTON = "button"
+ATTR_MLGW_ACTION = "action"
+
+
 # ########################################################################################
 # ##### MasterLink (not MLGW)  Protocol packet constants
 
@@ -343,6 +351,10 @@ MLGW_PL = {v.upper(): k for k, v in mlgw_payloadtypedict.items()}
 
 
 mlgw_virtualactiondict = dict([(0x01, "PRESS"), (0x02, "HOLD"), (0x03, "RELEASE")])
+
+reverse_mlgw_virtualactiondict = {
+    v.upper(): k for k, v in mlgw_virtualactiondict.items()
+}
 
 ### for '0x03: Picture and Sound Status'
 mlgw_soundstatusdict = dict([(0x00, "Not muted"), (0x01, "Muted")])

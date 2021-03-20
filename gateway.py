@@ -339,8 +339,8 @@ class MasterLinkGateway:
         self._beolink_source = _dictsanitize(beo4_commanddict, source).upper()
         self.mlgw_send_beo4_cmd(mln, dest, source, sec_source, link)
 
-    def mlgw_send_virtual_btn_press(self, btn):
-        self.mlgw_send(0x20, [btn])
+    def mlgw_send_virtual_btn_press(self, btn, act=0x01):
+        self.mlgw_send(0x20, [btn, act])
 
     ## Get serial number of mlgw
     def mlgw_get_serial(self):
