@@ -106,6 +106,21 @@ Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.as
 
 Remember that only one source is shared on all the Masterlink speakers (it's a single zone system) so you can't play different sources on different speakers at the same time.
 
+The implemented `media_player` commands include:
+
+| turn_on |
+| turn_off |
+| select_source |
+| volume_up |
+| volume_down |
+| volume_mute |
+| media_previous_track |
+| media_next_track |
+| media_play |
+| media_stop |
+| media_pause |
+| shuffle_set |
+| repeat_set |
 
 ## Using the integration through Events
 
@@ -181,6 +196,12 @@ logger:
   logs:
     custom_components.mlgw: debug
 ```
+
+## Sending Virtual Button Commands
+
+You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual_button` service. This is useful if you want to control macros on the MLGW. 
+
+![image](https://user-images.githubusercontent.com/60585229/111884347-6945d180-897e-11eb-98b9-891482898f48.png)
 
 
 ## Not implemented / TODO
