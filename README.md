@@ -196,6 +196,7 @@ You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual
 
 * Zeroconf autoconfiguration flow
 * Timer and Clock packets unpacking
+* Media Information (e.g., track name, album name) is only implemented in part -- and only works with devices that transmit it like the BeoSound 5. I don't have such a device so would love if somebody can debug this for me.
 
 ## Known Issues
 
