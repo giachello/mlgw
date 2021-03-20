@@ -108,19 +108,7 @@ Remember that only one source is shared on all the Masterlink speakers (it's a s
 
 The implemented `media_player` commands include:
 
-| turn_on |
-| turn_off |
-| select_source |
-| volume_up |
-| volume_down |
-| volume_mute |
-| media_previous_track |
-| media_next_track |
-| media_play |
-| media_stop |
-| media_pause |
-| shuffle_set |
-| repeat_set |
+` turn_on, turn_off, select_source, volume_up, volume_down, volume_mute, media_previous_track, media_next_track, media_play, media_stop, media_pause, shuffle_set, repeat_set`
 
 ## Using the integration through Events
 
