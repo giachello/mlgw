@@ -66,6 +66,7 @@ ml_telegram_type_dict = dict(
         (0x0B, "REQUEST"),
         (0x14, "RESPONSE"),
         (0x2C, "INFO"),
+        (0x5E, "CONFIG"),
     ]
 )
 
@@ -90,7 +91,6 @@ ml_command_type_dict = dict(
         # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
         (0x45, "GOTO_SOURCE"),
         (0x5C, "LOCK_MANAGER_COMMAND"),
-        (0x5E, "CONFIGURATION"),
         (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
         # Source Status
