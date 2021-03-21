@@ -20,7 +20,7 @@ Create a `mlgw` directory in `/config/custom_components/` and copy all the files
 
 ### Automatic configuration through Add Integrations (preferred)
 
-On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
+MLGW should show up through auto discovery in your Configuration->Integrations panel on Home Assistant. If you don't see it, go to "Configuration->Integrations-> (+)" and look for MLGW. 
 
 The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
 
@@ -194,7 +194,6 @@ You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual
 
 ## Not implemented / TODO
 
-* Zeroconf autoconfiguration flow
 * Timer and Clock packets unpacking
 * Media Information (e.g., track name, album name) is only implemented in part -- and only works with devices that transmit it like the BeoSound 5. I don't have such a device so would love if somebody can debug this for me.
 
