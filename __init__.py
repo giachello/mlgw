@@ -234,7 +234,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         )
     )
     if unload_ok:
-        await hass.services.async_remove(DOMAIN, SERVICE_VIRTUAL_BUTTON)
+        hass.services.async_remove(DOMAIN, SERVICE_VIRTUAL_BUTTON)
         gateway = hass.data[DOMAIN].pop(MLGW_GATEWAY)
         await gateway.terminate_async()
 
