@@ -164,15 +164,15 @@ There are too many ML telegram types to document here (and a lot are undocumente
 
 | Event | Payload Type | Arguments | Payload Argument | Description |
 | ----- | ------------ | --------- | ---------------- | ----------- |
-| mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker requests a certain source |
-| mlgw.ML_telegram | RELEASE | from_device, to_device | | Speaker turns off |
+| mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker requests a source |
+| mlgw.ML_telegram | RELEASE | from_device, to_device | | Speaker turned off |
 | mlgw.ML_telegram | STATUS_INFO | from_device, to_device | source, channel_track, activity, source_medium, picture_identifier | Reports source status changes |
 | mlgw.ML_telegram | TRACK_INFO | from_device, to_device | subtype (Change Source, Current Source) , prev_source, source | Reports changes in the source |
-| mlgw.ML_telegram | STANDBY | from_device, to_device |  | Device turns off |
-| mlgw.ML_telegram | BEO4_KEY | from_device, to_device | source, command  | Beo4 key pressed on a speaker | 
+| mlgw.ML_telegram | STANDBY | from_device, to_device |  |  Turn off device |
+| mlgw.ML_telegram | BEO4_KEY | from_device, to_device | source, command  | Beo4 remote key press for a speaker | 
 | mlgw.ML_telegram | TIMER | from_device, to_device |  | Timer functionality invoked |
-| mlgw.ML_telegram | MLGW_REMOTE_BEO4 | from_device, to_device | command, dest_selector | issued when an external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
-| mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the Radio or CD track that is playing | 
+| mlgw.ML_telegram | MLGW_REMOTE_BEO4 | from_device, to_device | command, dest_selector | An external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
+| mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the track that is playing | 
 
 
 
