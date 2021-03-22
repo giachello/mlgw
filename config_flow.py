@@ -189,38 +189,39 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         _LOGGER.debug("zeroconf_confirm: %s" % user_input)
 
-        if user_input is not None:
-            errors = {}
-            user_input[CONF_HOST] = self.host
+        if user_input is None:
+            return self.async_show_form(
+                step_id="zeroconf_confirm",
+                data_schema=ZEROCONF_STEP_DATA_SCHEMA,
+                description_placeholders={
+                    "name": self.host,
+                },
+            )
 
-            try:
-                if not host_valid(user_input[CONF_HOST]):
-                    raise InvalidHost()
+        errors = {}
+        user_input[CONF_HOST] = self.host
 
-                info = await validate_input(self.hass, user_input)
-            except Exception as e:
-                _LOGGER.debug("zeroconf_confirm: Exception %s" % str(e))
-                errors["base"] = "cannot_connect"
-            else:
-                return self.async_create_entry(
-                    title=(
-                        "Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"])
-                    ),
-                    data={
-                        CONF_HOST: self.host,
-                        CONF_PASSWORD: user_input[CONF_PASSWORD],
-                        CONF_USERNAME: user_input[CONF_USERNAME],
-                        CONF_MLGW_USE_MLLOG: user_input[CONF_MLGW_USE_MLLOG],
-                    },
-                )
+        try:
+            if not host_valid(user_input[CONF_HOST]):
+                raise InvalidHost()
 
-        _LOGGER.debug("zeroconf_confirm calling show form: %s" % self.host)
+            info = await validate_input(self.hass, user_input)
 
-        return self.async_show_form(
-            step_id="zeroconf_confirm",
-            data_schema=ZEROCONF_STEP_DATA_SCHEMA,
-            description_placeholders={
-                "name": self.host,
+        except Exception as e:
+            _LOGGER.debug("zeroconf_confirm: Exception %s" % str(e))
+            errors["base"] = "cannot_connect"
+
+        await self.async_set_unique_id(info["sn"])
+
+        self._abort_if_unique_id_configured()
+
+        return self.async_create_entry(
+            title=("Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
+            data={
+                CONF_HOST: self.host,
+                CONF_PASSWORD: user_input[CONF_PASSWORD],
+                CONF_USERNAME: user_input[CONF_USERNAME],
+                CONF_MLGW_USE_MLLOG: user_input[CONF_MLGW_USE_MLLOG],
             },
         )
 
