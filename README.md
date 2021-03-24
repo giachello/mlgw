@@ -110,7 +110,7 @@ The implemented `media_player` commands include:
 
 ` turn_on, turn_off, select_source, volume_up, volume_down, volume_mute, media_previous_track, media_next_track, media_play, media_stop, media_pause, shuffle_set, repeat_set`
 
-## Using the integration through Events
+## Home Assistant Events
 
 The integration also forwards events to Home Assistant that you can use for your automations.
 
@@ -187,7 +187,7 @@ logger:
 
 ## Sending Virtual Button Commands
 
-You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual_button` service. This is useful if you want to control macros on the MLGW. 
+You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual_button` service. This is useful if you want to activate macros on the MLGW. You can send PRESS, HOLD and RELEASE commands, but typically you will just need to send one PRESS. [This documentation file](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/MlgwProto0240.pdf) describes how to use the HOLD and RELEASE commands.
 
 ![image](https://user-images.githubusercontent.com/60585229/111884347-6945d180-897e-11eb-98b9-891482898f48.png)
 
