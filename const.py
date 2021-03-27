@@ -48,6 +48,14 @@ CONF_MLGW_DEVICE_MLID = "id"
 # if you decide to use it, then Username must be 'admin' and password must be the admin password.
 CONF_MLGW_USE_MLLOG = "use_mllog"
 
+
+# ########################################################################################
+# ##### Services
+
+ATTR_MLGW_BUTTON = "button"
+ATTR_MLGW_ACTION = "action"
+
+
 # ########################################################################################
 # ##### MasterLink (not MLGW)  Protocol packet constants
 
@@ -58,7 +66,7 @@ ml_telegram_type_dict = dict(
         (0x0B, "REQUEST"),
         (0x14, "RESPONSE"),
         (0x2C, "INFO"),
-        (0x5E, "CONFIGURATION"),
+        (0x5E, "CONFIG"),
     ]
 )
 
@@ -86,8 +94,9 @@ ml_command_type_dict = dict(
         (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
         # Source Status
-        # byte 10:source - byte 18,19: channel/track - byte 21:activity - byte 17: source medium - byte 23: picture identifiedr
-        # Byte 13: 80 when DTV is turned off. 00 when it's on
+        # byte 10:source - byte 13: 80 when DTV is turned off. 00 when it's on
+        # byte 18H 17L: source medium - byte 19: channel/track - byte 21:activity
+        # byte 22: 01: audio source 02: video source ff:undefined - byte 23: picture identifier
         (0x87, "STATUS_INFO"),
         (0x94, "VIDEO_TRACK_INFO"),
         #
@@ -343,6 +352,10 @@ MLGW_PL = {v.upper(): k for k, v in mlgw_payloadtypedict.items()}
 
 
 mlgw_virtualactiondict = dict([(0x01, "PRESS"), (0x02, "HOLD"), (0x03, "RELEASE")])
+
+reverse_mlgw_virtualactiondict = {
+    v.upper(): k for k, v in mlgw_virtualactiondict.items()
+}
 
 ### for '0x03: Picture and Sound Status'
 mlgw_soundstatusdict = dict([(0x00, "Not muted"), (0x01, "Muted")])

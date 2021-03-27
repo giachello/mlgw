@@ -21,10 +21,18 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# TODO adjust the data schema to the data that you need
+# Data schema for the configuration flows
 USER_STEP_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
+        vol.Required(CONF_USERNAME): str,
+        vol.Required(CONF_PASSWORD): str,
+        vol.Required(CONF_MLGW_USE_MLLOG): bool,
+    }
+)
+
+ZEROCONF_STEP_DATA_SCHEMA = vol.Schema(
+    {
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_MLGW_USE_MLLOG): bool,
@@ -43,14 +51,12 @@ def host_valid(host):
 
 
 class CheckPasswordMLGWHub:
-    """Placeholder class to make tests pass.
-
-    TODO Remove this placeholder class and replace with things from your PyPI package.
-    """
+    """Checks Password for the MLGW Hub and gets basic information. """
 
     def __init__(self, host):
         """Initialize."""
         self._host = host
+        self._data = None
 
     def authenticate(self, user, password) -> bool:
         """Test if we can authenticate with the host."""
@@ -75,6 +81,7 @@ class CheckPasswordMLGWHub:
         if response.status_code != 200:
             return False
 
+        self._data = response.json()
         return True
 
 
@@ -99,13 +106,11 @@ async def validate_input(hass: core.HomeAssistant, data):
         hub.authenticate, data[CONF_USERNAME], data[CONF_PASSWORD]
     )
 
-    # If you cannot connect:
-    # throw CannotConnect
-    # If the authentication is wrong:
-    # InvalidAuth
+    # If you cannot connect throw CannotConnect
+    # If the authentication is wrong throw InvalidAuth
 
     # Return info that you want to store in the config entry.
-    return {"title": "Masterlink Gateway"}
+    return {"name": hub._data["project"], "sn": hub._data["sn"]}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -147,10 +152,77 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            return self.async_create_entry(title=info["title"], data=user_input)
+            return self.async_create_entry(
+                title=("Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
+                data=user_input,
+            )
 
         return self.async_show_form(
             step_id="user", data_schema=USER_STEP_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_zeroconf(self, discovery_info):
+        """Handle zeroconf discovery."""
+        _LOGGER.debug("Async_Step_Zeroconf start")
+        if discovery_info is None:
+            return self.async_abort(reason="cannot_connect")
+        _LOGGER.debug("Async_Step_Zeroconf discovery info %s" % discovery_info)
+
+        # if it's not a MLGW or BLGW device, then abort
+        if not discovery_info.get("name"):
+            return self.async_abort(reason="not_mlgw_device")
+
+        if not (
+            discovery_info["name"].startswith("MLGW")
+            or discovery_info["name"].startswith("BLGW")
+        ):
+            return self.async_abort(reason="not_mlgw_device")
+
+        # Hostname is format: mlgw.local.
+        self.host = discovery_info["hostname"].rstrip(".")
+        _LOGGER.debug("Async_Step_Zeroconf Hostname %s" % self.host)
+
+        return await self.async_step_zeroconf_confirm()
+
+    async def async_step_zeroconf_confirm(self, user_input=None):
+        """Handle a flow initiated by zeroconf."""
+
+        _LOGGER.debug("zeroconf_confirm: %s" % user_input)
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="zeroconf_confirm",
+                data_schema=ZEROCONF_STEP_DATA_SCHEMA,
+                description_placeholders={
+                    "name": self.host,
+                },
+            )
+
+        errors = {}
+        user_input[CONF_HOST] = self.host
+
+        try:
+            if not host_valid(user_input[CONF_HOST]):
+                raise InvalidHost()
+
+            info = await validate_input(self.hass, user_input)
+
+        except Exception as e:
+            _LOGGER.debug("zeroconf_confirm: Exception %s" % str(e))
+            errors["base"] = "cannot_connect"
+
+        await self.async_set_unique_id(info["sn"])
+
+        self._abort_if_unique_id_configured()
+
+        return self.async_create_entry(
+            title=("Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
+            data={
+                CONF_HOST: self.host,
+                CONF_PASSWORD: user_input[CONF_PASSWORD],
+                CONF_USERNAME: user_input[CONF_USERNAME],
+                CONF_MLGW_USE_MLLOG: user_input[CONF_MLGW_USE_MLLOG],
+            },
         )
 
 

@@ -17,6 +17,15 @@
                     "username": "Username",
                     "use_mllog": "Use Undocumented MasterLink Bus Feature"
                 }
+            },
+            "zeroconf_confirm": {
+                "data": {
+                    "password": "Password",
+                    "username": "Username",
+                    "use_mllog": "Use Undocumented MasterLink Bus Feature"
+                },
+                "description": "Do you want to add {name} to Home Assistant?",
+                "title": "Discovered MLGW device"
             }
         }
     },

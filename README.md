@@ -20,7 +20,7 @@ Create a `mlgw` directory in `/config/custom_components/` and copy all the files
 
 ### Automatic configuration through Add Integrations (preferred)
 
-On Home Assistant, go to "Configuration->Integrations-> (+)" and look for MLGW
+MLGW should show up through auto discovery in your Configuration->Integrations panel on Home Assistant. If you don't see it, go to "Configuration->Integrations-> (+)" and look for MLGW. After you configure it, autodiscovery may show the device again, but you can safely ignore that.
 
 The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
 
@@ -82,7 +82,7 @@ You can also add a room number, corresponding to your MLGW configuration, and fo
       room: 1
 ```
 
-Put any NL devices at the end of the list. They typically start at MLN 20. If you don't the ML<>MLN will mess up and the system will not work as intended.
+Put any Network Link devices at the end of the list. They typically start at MLN 20. If you don't, the Direct Master Link Connection feature will get confused and the system will not work as intended.
 
 
 ## Special Undocumented Feature: Direct Master Link Connection
@@ -91,35 +91,38 @@ This integration uses a special undocumented feature of the Master Link Gateway 
 
 It allows all kinds of fun integrations. For example you can start and control your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
 
-For this to work, you must use **'username: admin'**, and the admin password as credentials form the MLGW, because normal users do not have access to the feature. Also, set **'use_mllog: true'** in the configuration.
+For this to work, you must use **'username: admin'**, and the admin password as credentials for the MLGW and set **'use_mllog: true'** in the configuration.
 
 The integration works also without this feature, but it's much better with it.
 
 
 ## Using the integration
 
-### Speakers and Bang Olufsen Sources
+### Speakers and Bang & Olufsen Sources
 
-Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can integrate in your normal lovelace interface. I use [mini media player ](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and sources from your Home Assistant dashboard.
+Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can integrate in your normal lovelace interface. I use [mini media player ](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and turn on the B&O sources from your Home Assistant dashboard.
 
 ![Mini Media Player](./mini_media_player.png)
 
 Remember that only one source is shared on all the Masterlink speakers (it's a single zone system) so you can't play different sources on different speakers at the same time.
 
+The implemented `media_player` commands include:
 
-## Using the integration through Events
+` turn_on, turn_off, select_source, volume_up, volume_down, volume_mute, media_previous_track, media_next_track, media_play, media_stop, media_pause, shuffle_set, repeat_set`
+
+## Home Assistant Events
 
 The integration also forwards events to Home Assistant that you can use for your automations.
 
 ### MasterLink Gateway official commands: Lights and Virtual Buttons
 
-The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light commands, Control commands, Picture and Sound Status, Source Status, and "All Standby". 
+The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby". 
 
 The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
 For example, if the user selects `LIGHT-1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
 
-The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off spotify streaming:
+The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off Spotify streaming:
 
 
 ![All Standby Event](./all_standby_event.png)
@@ -145,7 +148,7 @@ The enhanced Undocumented Feature forwards *ALL* MasterLink events that happen o
 
 The possibilities are endless. You can see a few examples here: [https://github.com/giachello/mlgw/blob/main/example_automations.yaml](example_automations.yaml). An easy way to see what goes on the ML bus is using the "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.ML_telegram` in the field on the bottom of the page.
 
-For example the following setup catches a key event on the Beo4 remote.
+For example the following setup catches the Green key event on the Beo4 remote.
 
 ![BEO4 key event](./beo4_key_event.png)
 
@@ -154,22 +157,22 @@ Another example is to stop playback when the "Stop" button is pressed on the rem
 ![stop event](./stop_event.png)
 
 
-A full list of BEO4 Keys is available starting at line 122 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
+A full list of BEO4 Keys is available starting at line 197 in this file: [https://github.com/giachello/mlgw/blob/main/const.py](https://github.com/giachello/mlgw/blob/main/const.py)
 
 There are too many ML telegram types to document here (and a lot are undocumented publicly), but a few particularly useful ones are listed below (see const.py and gateway.py for more information).
 
 
 | Event | Payload Type | Arguments | Payload Argument | Description |
 | ----- | ------------ | --------- | ---------------- | ----------- |
-| mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker requests a certain source |
-| mlgw.ML_telegram | RELEASE | from_device, to_device | | Speaker turns off |
-| mlgw.ML_telegram | STATUS_INFO | from_device, to_device | source, channel_track, activity, source_medium, picture_identifier | Reports source status changes |
-| mlgw.ML_telegram | TRACK_INFO | from_device, to_device | subtype (Change Source, Current Source) , prev_source, source | Reports changes in the source |
-| mlgw.ML_telegram | STANDBY | from_device, to_device |  | Device turns off |
-| mlgw.ML_telegram | BEO4_KEY | from_device, to_device | source, command  | Beo4 key pressed on a speaker | 
+| mlgw.ML_telegram | GOTO_SOURCE | from_device, to_device | source, channel_track | Speaker (from_device) requests a source |
+| mlgw.ML_telegram | RELEASE | from_device, to_device | | Speaker (from_device) turned off |
+| mlgw.ML_telegram | STATUS_INFO | from_device, to_device | source, channel_track, activity, source_medium, picture_identifier | Source status changes |
+| mlgw.ML_telegram | TRACK_INFO | from_device, to_device | subtype (Change Source, Current Source) , prev_source, source | The source changed |
+| mlgw.ML_telegram | STANDBY | from_device, to_device |  |  Turn off device (to_device) |
+| mlgw.ML_telegram | BEO4_KEY | from_device, to_device | source, command  | Beo4 remote key press for a speaker (from_device) | 
 | mlgw.ML_telegram | TIMER | from_device, to_device |  | Timer functionality invoked |
-| mlgw.ML_telegram | MLGW_REMOTE_BEO4 | from_device, to_device | command, dest_selector | issued when an external device (e.g., the B&O phone app or Home Assistant) sends a BEO4 command through the MLGW |
-| mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the Radio or CD track that is playing | 
+| mlgw.ML_telegram | MLGW_REMOTE_BEO4 | from_device, to_device | command, dest_selector | The B&O app or Home Assistant sends a BEO4 command through the MLGW to a speaker (to_device) |
+| mlgw.ML_telegram | TRACK_INFO_LONG | from_device, to_device | source, channel_track, activity | Information about the track that is playing | 
 
 
 
@@ -182,11 +185,17 @@ logger:
     custom_components.mlgw: debug
 ```
 
+## Sending Virtual Button Commands
+
+You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual_button` service. This is useful if you want to activate macros on the MLGW. You can send PRESS, HOLD and RELEASE commands, but typically you will just need to send one PRESS. [This documentation file](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/MlgwProto0240.pdf) describes how to use the HOLD and RELEASE commands.
+
+![image](https://user-images.githubusercontent.com/60585229/111884347-6945d180-897e-11eb-98b9-891482898f48.png)
+
 
 ## Not implemented / TODO
 
-* Zeroconf autoconfiguration flow
 * Timer and Clock packets unpacking
+* Media Information (e.g., track name, album name) is only implemented in part -- and only works with devices that transmit it like the BeoSound 5. I don't have such a device so would love if somebody can debug this for me.
 
 ## Known Issues
 

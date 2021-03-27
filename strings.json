@@ -9,6 +9,15 @@
           "password": "[%key:common::config_flow::data::password%]",
           "use_mllog": "Use Undocumented MasterLink Bus Feature"
         }
+      },
+      "zeroconf_confirm": {
+        "description": "Do you want to add {name} to Home Assistant?",
+        "title": "Discovered MLGW device",
+        "data": {
+          "use_mllog": "Device type",
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        }
       }
     },
     "error": {

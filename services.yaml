@@ -1,0 +1,9 @@
+virtual_button:
+  description: "Generate a virtual button event on MLGW"
+  fields:
+    button:
+      description: "The button number, in the range 1 to 255"
+      example: "1"
+    action:
+      description: "This parameter (available since MLGW SW 2.2) determines the button action: PRESS, HOLD, RELEASE. It defaults to PRESS."
+      example: "PRESS"

@@ -222,28 +222,11 @@ class MasterLinkGateway:
                                 encoded_telegram["from_mln"] = x._mln
                             if x._ml == encoded_telegram["to_device"]:
                                 encoded_telegram["to_mln"] = x._mln
-                                
-                    # if a valid STATUS INFO or a GOTO_Source telegram is received,
-                    # set the beolink source to it
-                    if (
-                        encoded_telegram["payload_type"] == "GOTO_SOURCE"
-                    ) or (
-                            (
-                            encoded_telegram["payload_type"] == "STATUS_INFO"
-                            and encoded_telegram["payload"]["activity"] != "Standby"
-                            and self._beolink_source != encoded_telegram["payload"]["source"]
-                        ) and (
-                                (
-                                encoded_telegram["to_device"] == 'MLGW'
-                            ) or (
-                                encoded_telegram["orig_src"] == "DTV"
-                                and encoded_telegram["payload"]["source"] == "DTV"
-                                and encoded_telegram["payload"]["channel_track"] > 0
-                                and encoded_telegram["payload"]["local source"] == "Yes"
-                            )
-                        )
-                    ):
-                    	self._beolink_source = encoded_telegram["payload"]["source"]
+
+                    # if a GOTO Source telegram is received, set the beolink source to it
+                    # this only tracks the primary beolink source, doesn't track local sources
+                    if encoded_telegram["payload_type"] == "GOTO_SOURCE":
+                        self._beolink_source = encoded_telegram["payload"]["source"]
 
                     self._hass.add_job(
                         self._notify_incoming_ML_telegram, encoded_telegram
@@ -357,8 +340,8 @@ class MasterLinkGateway:
         self._beolink_source = _dictsanitize(beo4_commanddict, source).upper()
         self.mlgw_send_beo4_cmd(mln, dest, source, sec_source, link)
 
-    def mlgw_send_virtual_btn_press(self, btn):
-        self.mlgw_send(0x20, [btn])
+    def mlgw_send_virtual_btn_press(self, btn, act=0x01):
+        self.mlgw_send(0x20, [btn, act])
 
     ## Get serial number of mlgw
     def mlgw_get_serial(self):
@@ -441,20 +424,21 @@ class MasterLinkGateway:
                     decoded["picture_format"] = pictureFormat
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
                     # remember the new source
-                    # if sourceActivity != "Standby":
-                    #    self._beolink_source = beolink_source
+                    if sourceActivity != "Standby" and sourceActivity != "Unknown":
+                        self._beolink_source = beolink_source
                     # change the source of the MLN
                     # reporting the change
                     # not sure this works in all situations
-                    # sourcePositionInt = response[8] * 256 + response[9]
-                    # if (
-                    #    sourceActivity != "Standby"
-                    #    and sourcePositionInt > 0
-                    #    and self._devices is not None
-                    # ):
-                   #     for x in self._devices:
-                   #         if x._mln == sourceMLN:
-                   #             x.set_source(response[5])
+                    sourcePositionInt = response[8] * 256 + response[9]
+                    if (
+                        sourceActivity != "Standby"
+                        and sourceActivity != "Unknown"
+                        and sourcePositionInt > 0
+                        and self._devices is not None
+                    ):
+                        for x in self._devices:
+                            if x._mln == sourceMLN:
+                                x.set_source(response[5])
 
                 elif msg_byte == 0x03:  # Picture and Sound status
                     decoded = dict()
@@ -670,38 +654,21 @@ def decode_ml_to_dict(telegram):
     decoded["payload"] = dict()
 
     # source status info
-    # TTFF__TYDSOS__PTLLPS SR____________SLSHTR__AC__PI________________________TRTR______
+    # TTFF__TYDSOS__PTLLPS SR____DO______SLSHTR__ACSTPI________________________TRTR______
     if telegram[7] == 0x87:
         ml_source = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
-        ml_source_ID = telegram[10]
-        ml_source_medium = int(_hexword(telegram[18], telegram[17]), base=16) 
-        if int(pl_len) > 27:
-            ml_source_track = int(_hexword(telegram[36], telegram[37]), base=16) 
-        else:
-            ml_source_track = telegram[19]
-        ml_source_activity = _dictsanitize(ml_state_dict, telegram[21])
-        ml_picture_id_format = _dictsanitize(ml_pictureformatdict, telegram[23])
-        pl_4bytes = (telegram[12],telegram[13],telegram[14],telegram[15])
+        decoded["payload"]["sourceID"] = telegram[10]
+        decoded["payload"]["DTV_off"] = telegram[13]
+        decoded["payload"]["source_medium"] = _hexword(telegram[18], telegram[17])
+        decoded["payload"]["channel_track"] = telegram[19]
+        decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[21])
+        decoded["payload"]["source_type"] = telegram[22]
+        decoded["payload"]["picture_identifier"] = _dictsanitize(
+            ml_pictureformatdict, telegram[23]
+        )
 
-        if (
-            sum(pl_4bytes,0) != 0
-            and rx_Device != "MLGW" 
-            and ml_source == "DTV"
-        ):
-            ml_check_source = "No"
-        else:
-            ml_check_source = "Yes"
-
-        decoded["payload"]["source"] = ml_source
-        decoded["payload"]["sourceID"] = ml_source_ID
-        decoded["payload"]["local source"] = ml_check_source
-        decoded["payload"]["channel_track"] = ml_source_track
-        decoded["payload"]["activity"] = ml_source_activity
-        decoded["payload"]["source_medium"] = ml_source_medium
-        decoded["payload"]["picture_identifier"] = ml_picture_id_format
-        
     # display source information
     if telegram[7] == 0x06:
         _s = ""

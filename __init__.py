@@ -1,5 +1,6 @@
 """The MasterLink Gateway integration."""
 import asyncio
+from homeassistant.helpers.typing import ServiceDataType
 from .gateway import create_mlgw_gateway, create_mlgw_gateway_with_configuration_data
 from .media_player import BeoSpeaker
 import logging
@@ -35,6 +36,9 @@ from .const import (
     BASE_URL,
     TIMEOUT,
     MLGW_CONFIG_JSON_PATH,
+    ATTR_MLGW_ACTION,
+    ATTR_MLGW_BUTTON,
+    reverse_mlgw_virtualactiondict,
 )
 
 
@@ -70,6 +74,16 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+SERVICE_VIRTUAL_BUTTON = "virtual_button"
+
+SERVICE_VIRTUAL_BUTTON_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_MLGW_BUTTON): cv.positive_int,
+        vol.Optional(ATTR_MLGW_ACTION, default="PRESS"): cv.string,
+    }
+)
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -79,7 +93,17 @@ PLATFORMS = ["media_player"]
 
 # This is the routine that is used when configuring from configuration.yaml
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the MasterLink Gateway component."""
+    """Set up the MasterLink Gateway from configuration.yaml."""
+
+    def virtual_button_press(service: ServiceDataType):
+        if not gateway:
+            return False
+        act = reverse_mlgw_virtualactiondict.get(service.data[ATTR_MLGW_ACTION])
+        if act is None:
+            act = 0x01
+        gateway.mlgw_send_virtual_btn_press(service.data[ATTR_MLGW_BUTTON], act)
+        return True
+
     hass.data.setdefault(DOMAIN, {})
     mlgw_config = config.get(DOMAIN, {})
     if not mlgw_config:
@@ -106,6 +130,14 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
     hass.async_create_task(
         discovery.async_load_platform(hass, "media_player", DOMAIN, {}, mlgw_config)
+    )
+
+    # Register the service
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_VIRTUAL_BUTTON,
+        virtual_button_press,
+        schema=SERVICE_VIRTUAL_BUTTON_SCHEMA,
     )
 
     #    hass.async_create_task(
@@ -143,8 +175,15 @@ def get_mlgw_configuration_data(host: str, username: str, password: str):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up MasterLink Gateway from a config entry."""
-    # TODO Store an API object for your platforms to access
-    # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
+
+    def virtual_button_press(service: ServiceDataType):
+        if not gateway:
+            return False
+        act = reverse_mlgw_virtualactiondict.get(service.data[ATTR_MLGW_ACTION])
+        if act is None:
+            act = 0x01
+        gateway.mlgw_send_virtual_btn_press(service.data[ATTR_MLGW_BUTTON], act)
+        return True
 
     host = entry.data.get(CONF_HOST)
     password = entry.data.get(CONF_PASSWORD)
@@ -171,6 +210,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
 
+    # Register the service
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_VIRTUAL_BUTTON,
+        virtual_button_press,
+        schema=SERVICE_VIRTUAL_BUTTON_SCHEMA,
+    )
+
     return True
 
 
@@ -187,6 +234,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         )
     )
     if unload_ok:
+        hass.services.async_remove(DOMAIN, SERVICE_VIRTUAL_BUTTON)
         gateway = hass.data[DOMAIN].pop(MLGW_GATEWAY)
         await gateway.terminate_async()
 
