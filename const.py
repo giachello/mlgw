@@ -203,6 +203,15 @@ ml_selectedsourcedict = dict(
 
 reverse_ml_selectedsourcedict = {v.upper(): k for k, v in ml_selectedsourcedict.items()}
 
+ml_selectedsource_type_dict = dict(
+	[
+		("VIDEO", (0x0B, 0x15, 0x16, 0x1F, 0x29, 0x33, 0x3E)),
+        ("VIDEO_PAUSABLE", (0x16, 0x29,)),
+		("AUDIO", (0x6F, 0x79, 0x7A, 0xA1, 0x8D, 0x97, 0x47)),
+        ("AUDIO_PAUSABLE", (0x79, 0x7A, 0x8D)),
+	]
+)
+
 beo4_commanddict = dict(
     [
         # Source selection:
