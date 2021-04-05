@@ -441,7 +441,10 @@ class BeoSpeaker(MediaPlayerEntity):
                         if self.source is not None:
                             _statusID = (self._sources[self._source_names.index(self.source)]['statusID'])
                             if _statusID != 0x97 and _statusID in ml_selectedsource_type_dict["AUDIO"]:
-                                if _event.data["orig_src"] == "RADIO":
+                                if (
+                                	_event.data["orig_src"] == "RADIO"
+                                	or _event.data["orig_src"] == "N.RADIO"
+                                ):
                                     if _event.data["payload"]["info_type"] == 2:
                                         self._media_artist = _event.data["payload"]["info_value"]
                                     elif _event.data["payload"]["info_type"] == 3:
@@ -449,7 +452,11 @@ class BeoSpeaker(MediaPlayerEntity):
                                         self._media_artist += f" / {_country}"
                                     elif _event.data["payload"]["info_type"] == 4:
                                         self._media_title = _event.data["payload"]["info_value"]
-                                elif _event.data["orig_src"] =="A.MEM":
+                                elif (
+                                		_event.data["orig_src"] =="A.MEM"
+                                		or _event.data["orig_src"] == "N.MUSIC"
+                                		or _event.data["orig_src"] == "CD"
+                                	):
                                     if _event.data["payload"]["info_type"] == 2:
                                     	self._media_album_name = _event.data["payload"]["info_value"]
                                     elif _event.data["payload"]["info_type"] == 3:
