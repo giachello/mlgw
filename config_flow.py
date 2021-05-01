@@ -1,9 +1,17 @@
-"""Config flow for MasterLink Gateway integration."""
+"""
+
+Config flow for MasterLink Gateway integration.
+
+Includes code from Lele-72. Thank you!
+
+"""
 import logging
 import ipaddress
 import re
 import voluptuous as vol
 import requests
+import socket
+import xml.etree.ElementTree as ET
 from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 from requests.exceptions import ConnectTimeout
 
@@ -49,6 +57,40 @@ def host_valid(host):
         disallowed = re.compile(r"[^a-zA-Z\d\-]")
         return all(x and not disallowed.search(x) for x in host.split("."))
 
+    ## Get serial number of mlgw
+
+
+async def mlgw_get_xmpp_serial(_host: str) -> str:
+    _LOGGER.info("Open XMPP connect to MLGW")
+    # open socket to masterlink gateway
+    _socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    _socket.settimeout(TIMEOUT)
+    try:
+        _socket.connect((_host, 5222))
+    except Exception as e:
+        _LOGGER.error("Error opening XMPP connection to MLGW (%s): %s" % (_host, e))
+        _socket.close()
+        return None
+    # Request serial number to mlgw
+    _telegram = (
+        "<?xml version='1.0'?>"
+        "<stream:stream to='products.bang-olufsen.com' version='1.0' "
+        "xmlns='jabber:client' "
+        "xmlns:stream='http://etherx.jabber.org/streams'>"
+    )
+    ## Receive serial number string from mlgw
+    sn = None
+    try:
+        _socket.sendall(_telegram.encode())
+        _mlgwdata = (_socket.recv(1024)).decode("utf-8")
+        _xml = ET.fromstring(_mlgwdata + "</stream:stream>")
+        sn = _xml.attrib["from"].split("@")[0].split(".")[2]
+        _socket.close()
+    except Exception as e:
+        _LOGGER.error("Error receiving MLGW info from %s: %s" % (_host, e))
+        _socket.close()
+
+    return sn
 
 class CheckPasswordMLGWHub:
     """Checks Password for the MLGW Hub and gets basic information. """
@@ -181,6 +223,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Hostname is format: mlgw.local.
         self.host = discovery_info["hostname"].rstrip(".")
         _LOGGER.debug("Async_Step_Zeroconf Hostname %s" % self.host)
+
+        try:
+            sn = await mlgw_get_xmpp_serial(self.host)
+        except Exception as e:
+            _LOGGER.debug("Exception %s" % str(e))
+            return self.async_abort(reason="cannot_connect")
+        if sn is not None:
+            await self.async_set_unique_id(sn)
+            self._abort_if_unique_id_configured()
 
         return await self.async_step_zeroconf_confirm()
 
