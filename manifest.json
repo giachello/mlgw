@@ -6,11 +6,10 @@
   "documentation": "https://github.com/giachello/mlgw",
   "requirements": [],
   "ssdp": [],
-  "zeroconf": [ "_http._tcp.local."],
+  "zeroconf": [{"type":"_http._tcp.local.","name":"*lgw*"}],
   "homekit": {},
   "dependencies": [],
   "after_dependencies": [ "media_player" ],
-  "codeowners": [
-    "@giachello"
-  ]
+  "iot_class": "local_polling",
+  "codeowners": ["@giachello","@Lele-72"]
 }
