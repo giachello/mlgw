@@ -63,7 +63,7 @@ from homeassistant.components.media_player.const import (
     SUPPORT_PREVIOUS_TRACK,
     SUPPORT_NEXT_TRACK,
     SUPPORT_PLAY,
-	SUPPORT_PLAY_MEDIA,
+    SUPPORT_PLAY_MEDIA,
     SUPPORT_PAUSE,
     SUPPORT_SHUFFLE_SET,
     SUPPORT_REPEAT_SET,

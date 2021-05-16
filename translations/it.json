@@ -1,33 +1,34 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Il dispositivo è già configurato"
-        },
-        "error": {
-            "cannot_connect": "Impossibile connettersi",
-            "invalid_auth": "Autenticazione non valida",
-            "unknown": "Errore imprevisto",
-            "invalid_host": "Formato host non valido"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "host": "Host",
-                    "password": "Password",
-                    "username": "Nome utente",
-                    "use_mllog": "Uso di funzioni non documentate del MasterLink Bus"
-                }
-            },
-            "zeroconf_confirm": {
-                "data": {
-                    "password": "Password",
-                    "username": "Nome utente",
-                    "use_mllog": "Uso di funzioni non documentate del MasterLink Bus"
-                },
-                "description": "Vuoi aggiungere {name} a Home Assistant?",
-                "title": "Scoperto un dispositivo MLGW"
-            }
-        }
-    },
-    "title": "MasterLink Gateway"
+	"title": "MasterLink Gateway",
+	"config": {
+		"step": {
+			"user": {
+				"data": {
+					"host": "Host",
+					"password": "Password",
+					"username": "Nome utente",
+					"use_mllog": "Uso di funzioni non documentate del MasterLink Bus"
+				}
+			},
+			"zeroconf_confirm": {
+				"description": "Vuoi aggiungere {name} a Home Assistant?",
+				"title": "Scoperto un dispositivo MLGW",
+				"data": {
+					"use_mllog": "Uso di funzioni non documentate del MasterLink Bus",
+					"username": "Nome utente",
+					"password": "Password"
+				}
+			}
+		},
+		"error": {
+			"cannot_connect": "Impossibile connettersi",
+			"invalid_auth": "Autenticazione non valida",
+			"unknown": "Errore imprevisto",
+			"invalid_host": "Formato host non valido",
+			"invalid_gateway": "Gateway non valido"
+		},
+		"abort": {
+			"already_configured": "Il dispositivo è già configurato"
+		}
+	}
 }
