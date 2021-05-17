@@ -5,6 +5,7 @@ from .gateway import create_mlgw_gateway, create_mlgw_gateway_with_configuration
 from .media_player import BeoSpeaker
 import logging
 import json
+import httpx
 
 import voluptuous as vol
 
@@ -150,25 +151,24 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 
-def get_mlgw_configuration_data(host: str, username: str, password: str):
-    import requests
-    from requests.auth import HTTPDigestAuth, HTTPBasicAuth
+async def async_get_mlgw_configuration_data(host: str, username: str,password: str):
 
-    # try with Digest Auth first
-    response = requests.get(
-        BASE_URL.format(host, MLGW_CONFIG_JSON_PATH),
-        timeout=TIMEOUT,
-        auth=HTTPDigestAuth(username, password),
-    )
-    # if unauthorized use fallback to Basic Auth
-    if response.status_code == 401:
-        response = requests.get(
+    # try Digest Auth first (this is needed for the MLGW)
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
             BASE_URL.format(host, MLGW_CONFIG_JSON_PATH),
             timeout=TIMEOUT,
-            auth=HTTPBasicAuth(username, password),
+            auth=httpx.DigestAuth(username, password),
         )
-    if response.status_code != 200:
-        return None
+    # if unauthorized use fallback to Basic Auth (this is needed for the BLGW)
+        if response.status_code == 401:
+            response = await client.get(
+                BASE_URL.format(host, MLGW_CONFIG_JSON_PATH),
+                timeout=TIMEOUT,
+                auth=httpx.BasicAuth(username, password),
+            )
+        if response.status_code != 200:
+            return None
 
     return response.json()
 
@@ -190,8 +190,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     username = entry.data.get(CONF_USERNAME)
     use_mllog = entry.data.get(CONF_MLGW_USE_MLLOG)
 
-    mlgw_configurationdata = await hass.async_add_executor_job(
-        get_mlgw_configuration_data, host, username, password
+    mlgw_configurationdata = await async_get_mlgw_configuration_data(
+        host, username, password
     )
 
     if mlgw_configurationdata is None:

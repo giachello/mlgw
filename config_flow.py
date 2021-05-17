@@ -42,7 +42,7 @@ ZEROCONF_STEP_DATA_SCHEMA = vol.Schema(
 
 Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
 """
-async def async_authenticate(_host: str,_user: str,_password: str) -> str:
+async def async_authenticate(_host: str,_user: str,_password: str) -> dict:
     # Test if we can authenticate with the host.
     data = None
     # try Digest Auth first (this is needed for the MLGW)
@@ -60,14 +60,10 @@ async def async_authenticate(_host: str,_user: str,_password: str) -> str:
                 auth=httpx.BasicAuth(_user, _password),
             )
             if response.status_code == 401:
-                _LOGGER.debug("Invalid authentication 401")
                 raise InvalidAuth()
         if response.status_code == 404:
-            _LOGGER.debug("Invalid Gateway 404: %s not found" % MLGW_CONFIG_JSON_PATH)
             raise InvalidGateway()
         if response.status_code != 200:
-            _LOGGER.error("Error %s while requesting %s"
-                % (str(exc.response)[1:(len(str(exc.response))-1)], exc.request.url))
             response.raise_for_status()
 
         data = response.json()
@@ -84,8 +80,8 @@ async def async_mlgw_get_xmpp_serial(_host: str) -> str:
     _socket.settimeout(TIMEOUT)
     try:
         _socket.connect((_host, 5222))
-    except Exception as e:
-        _LOGGER.error("Error opening XMPP connection to MLGW (%s): %s" % (_host, e))
+    except Exception as exc:
+        _LOGGER.error("Error opening XMPP connection to MLGW (%s): %s" % (_host, exc))
         _socket.close()
         return None
     # Request serial number to mlgw
@@ -104,8 +100,8 @@ async def async_mlgw_get_xmpp_serial(_host: str) -> str:
         sn = _xml.attrib["from"].split("@")[0].split(".")[2]
         _LOGGER.debug("Closed XMPP connection to MLGW - s/n %s" % sn)
         _socket.close()
-    except Exception as e:
-        _LOGGER.error("Closed XMPP connection - error receiving MLGW info from %s: %s" % (_host, e))
+    except Exception as exc:
+        _LOGGER.error("Closed XMPP connection - error receiving MLGW info from %s: %s" % (_host, exc))
         _socket.close()
 
     return sn
@@ -136,16 +132,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
                 )
-            except (CannotConnect, httpx.ConnectError, httpx.ConnectTimeout):
+            except (CannotConnect, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                _LOGGER.error("Error opening connection to MLGW (%s): %s"
+                    % (user_input[CONF_HOST], exc))
                 errors["base"] = "cannot_connect"
             except (InvalidHost, socket.gaierror):
+                _LOGGER.error("Invalid Host: %s" % user_input[CONF_HOST])
                 errors["base"] = "invalid_host"
             except InvalidGateway:
+                _LOGGER.error("Invalid Gateway 404: %s not found" % MLGW_CONFIG_JSON_PATH)
                 errors["base"] = "invalid_gateway"
             except InvalidAuth:
+                _LOGGER.error("Invalid authentication 401")
                 errors["base"] = "invalid_auth"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.error("Unexpected exception: %s while requesting http://%s/%s"
+                    % (exc, user_input[CONF_HOST], MLGW_CONFIG_JSON_PATH))
                 errors["base"] = "unknown"
             if not errors:
                 # Check if already configured
@@ -179,8 +181,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
         	sn = await async_mlgw_get_xmpp_serial(self.host)
-        except Exception as e:
-        	_LOGGER.debug("Exception %s" % str(e))
+        except Exception as exc:
+        	_LOGGER.debug("Exception %s" % exc)
         	return self.async_abort(reason="cannot_connect")
         if sn is not None:
         	await self.async_set_unique_id(sn)
@@ -201,12 +203,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
                 )
-            except (CannotConnect, httpx.ConnectError, httpx.ConnectTimeout):
+            except (CannotConnect, httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                _LOGGER.error("Error opening connection to MLGW (%s): %s"
+                    % (user_input[CONF_HOST], exc))
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
+                _LOGGER.error("Invalid authentication 401")
                 errors["base"] = "invalid_auth"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.error("Unexpected exception: %s while requesting http://%s/%s"
+                    % (exc, user_input[CONF_HOST], MLGW_CONFIG_JSON_PATH))
                 errors["base"] = "unknown"
             if not errors:
                 title=("Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"]))
