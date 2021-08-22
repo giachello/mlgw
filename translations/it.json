@@ -1,7 +1,8 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Il dispositivo è già configurato"
+            "already_configured": "Il dispositivo è già configurato",
+            "no_serial_number" : "Numero di serie inesistente"
         },
         "error": {
             "cannot_connect": "Impossibile connettersi",
