@@ -27,7 +27,8 @@
       "invalid_host": "Invalid host format"
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "no_serial_number" : "Couldn't fetch serial number"
     }
   }
 }

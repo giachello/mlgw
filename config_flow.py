@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 from requests.exceptions import ConnectTimeout
 
-from homeassistant import config_entries, core, exceptions
+from homeassistant import config_entries, core, exceptions, data_entry_flow
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 
 from .const import (
@@ -61,7 +61,7 @@ def host_valid(host):
 
 
 async def mlgw_get_xmpp_serial(_host: str) -> str:
-    _LOGGER.info("Open XMPP connect to MLGW")
+    _LOGGER.info("XMPP connect to MLGW: Open")
     # open socket to masterlink gateway
     _socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     _socket.settimeout(TIMEOUT)
@@ -90,7 +90,10 @@ async def mlgw_get_xmpp_serial(_host: str) -> str:
         _LOGGER.error("Error receiving MLGW info from %s: %s" % (_host, e))
         _socket.close()
 
+    _LOGGER.info("XMPP connect to MLGW: SN %s" % (sn))
+
     return sn
+
 
 class CheckPasswordMLGWHub:
     """Checks Password for the MLGW Hub and gets basic information. """
@@ -232,6 +235,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if sn is not None:
             await self.async_set_unique_id(sn)
             self._abort_if_unique_id_configured()
+        if sn is None:
+            raise data_entry_flow.AbortFlow("no_serial_number")
+
+        _LOGGER.debug(
+            "Async_Step_Zeroconf Awaiting Confirmation %s sn: %s" % (self.host, sn)
+        )
 
         return await self.async_step_zeroconf_confirm()
 

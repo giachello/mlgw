@@ -9,7 +9,12 @@ import threading
 import time
 
 from homeassistant.core import HassJob, callback, HomeAssistant
-from homeassistant.const import STATE_OFF, STATE_ON, EVENT_HOMEASSISTANT_STOP
+from homeassistant.const import (
+    STATE_OFF,
+    STATE_PLAYING,
+    EVENT_HOMEASSISTANT_STOP,
+    STATE_PAUSED,
+)
 
 from .const import (
     DOMAIN,
@@ -477,7 +482,7 @@ class MasterLinkGateway:
                     ):
                         for x in self._devices:
                             if x._mln == sourceMLN:
-                                x.set_state(STATE_ON)
+                                x.set_state(STATE_PLAYING)
 
                 elif msg_byte == 0x05:  # All Standby
                     #                    _LOGGER.info(f"mlgw: Msg type: {msg_type}. Payload: {msg_payload}")
@@ -647,15 +652,17 @@ def decode_ml_to_dict(telegram):
     decoded["payload"] = dict()
 
     # source status info
-    # TTFF__TYDSOS__PTLLPS SR____DO______SLSHTR__ACSTPI________________________TRTR______
+    # TTFF__TYDSOS__PTLLPS SR____LS______SLSHTR__ACSTPI________________________TRTR______
     if telegram[7] == 0x87:
         decoded["payload"]["source"] = _dictsanitize(
             ml_selectedsourcedict, telegram[10]
         )
         decoded["payload"]["sourceID"] = telegram[10]
-        decoded["payload"]["DTV_off"] = telegram[13]
+        decoded["payload"]["local_source"] = telegram[13]
         decoded["payload"]["source_medium"] = _hexword(telegram[18], telegram[17])
-        decoded["payload"]["channel_track"] = telegram[19]
+        decoded["payload"]["channel_track"] = (
+            telegram[19] if telegram[8] < 27 else (telegram[36] * 256 + telegram[37])
+        )
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[21])
         decoded["payload"]["source_type"] = telegram[22]
         decoded["payload"]["picture_identifier"] = _dictsanitize(
@@ -667,7 +674,7 @@ def decode_ml_to_dict(telegram):
         _s = ""
         for i in range(0, telegram[8] - 5):
             _s = _s + chr(telegram[i + 15])
-        decoded["payload"]["display_source"] = _s
+        decoded["payload"]["display_source"] = _s.rstrip()
     # extended source information
     if telegram[7] == 0x0B:
         decoded["payload"]["info_type"] = telegram[10]
@@ -696,7 +703,7 @@ def decode_ml_to_dict(telegram):
             ml_selectedsourcedict, telegram[13]
         )
         decoded["payload"]["sourceID"] = telegram[13]
-        decoded["payload"]["channel_track"] = _hexword(telegram[11], telegram[12])
+        decoded["payload"]["channel_track"] = telegram[11] * 256 + telegram[12]
         decoded["payload"]["activity"] = _dictsanitize(ml_state_dict, telegram[14])
     # track change info
     if telegram[7] == 0x44:
