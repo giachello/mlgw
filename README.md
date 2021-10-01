@@ -203,3 +203,10 @@ You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual
 * When a Video Master has several sources active at the same time (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both sources at the same time and that confuses the plugin. 
 * When the MLGW reboots, the integration loses connection and stops working. You need to reload the integration (Configuration->Integrations->MLGW->...->Reload). The solution will be to add a recovery procedure so the integration attempts to reconnect.
 
+## High level description of the code
+* **gateway.py** deals with the communication with the mlgw and is likely code that should go into a separate library / python module (pypi). it has some code to fire events on home assistant when things happen on the mlgw
+* **config_flow.py** is the configuration flow that asks the user the parameters for configuration and is home assistant specific. It stores the mlgw host and password configuration parameters inside HA which are then used by **\_\_init__.py**. There is one piece of mlgw-specific code (to get the serial number through xmpp). 
+* **\_\_init__.py** is called by home assistant to start the module. It calls gateway.py to create a gateway instance. It also pulls the json configuration from the gateway that lists all the devices configured on the gateway. 
+* **media_player.py** creates  "MediaPlayer" entities in Home assistant for each mlgw device. The Beospeaker class essentially manages the communication to and from the mlgw on an ongoing basis. There is one instance of the class for each device in the mlgw configuration.  It monitors the traffic on both the mlgw api and on the special masterlink backdoor I discovered. 
+
+Because the ml/mlgw is a single zone system and not all features are documented, there is a lot of random code to handle corner cases (e.g., if one speaker changes source, all other should too, because it's a single zone system, handling multiple video sources...).
