@@ -79,11 +79,6 @@ SUPPORT_BEO = (
     | SUPPORT_VOLUME_MUTE
     | SUPPORT_PREVIOUS_TRACK
     | SUPPORT_NEXT_TRACK
-    | SUPPORT_STOP
-    | SUPPORT_PLAY
-    | SUPPORT_PAUSE
-    | SUPPORT_SHUFFLE_SET
-    | SUPPORT_REPEAT_SET
 )
 
 from .const import (
@@ -448,17 +443,69 @@ class BeoSpeaker(MediaPlayerEntity):
                             )
 
                 # handle the extended source information and fill in some info for the UI
-                if _event.data["to_device"] == "ALL_LINK_DEVICES":
-                    if _event.data["payload_type"] == "EXTENDED_SOURCE_INFORMATION":
-                        self.clear_media_info()
-                        if _event.data["payload"]["info_type"] == 2:
-                            self._media_album_name = _event.data["payload"][
-                                "info_value"
-                            ]
-                        elif _event.data["payload"]["info_type"] == 3:
-                            self._media_artist = _event.data["payload"]["info_value"]
-                        elif _event.data["payload"]["info_type"] == 4:
-                            self._media_title = _event.data["payload"]["info_value"]
+                if _event.data["from_device"] == "AUDIO_MASTER":
+                    if _event.data["payload_type"] == "DISPLAY_SOURCE":
+                        if self.source is not None:
+                            _statusID = self._sources[
+                                self._source_names.index(self.source)
+                            ]["statusID"]
+                            if _statusID in ml_selectedsource_type_dict["AUDIO"]:
+                                self.clear_media_info()
+                                self._media_content_type = MEDIA_TYPE_MUSIC
+                    elif _event.data["payload_type"] == "EXTENDED_SOURCE_INFORMATION":
+                        if self.source is not None:
+                            _statusID = self._sources[
+                                self._source_names.index(self.source)
+                            ]["statusID"]
+                            if (
+                                _statusID != 0x97
+                                and _statusID in ml_selectedsource_type_dict["AUDIO"]
+                            ):
+                                if (
+                                    _event.data["orig_src"] == "RADIO"
+                                    or _event.data["orig_src"] == "N.RADIO"
+                                ):
+                                    if _event.data["payload"]["info_type"] == 2:
+                                        self._media_artist = _event.data["payload"][
+                                            "info_value"
+                                        ]
+                                    elif _event.data["payload"]["info_type"] == 3:
+                                        _country = _event.data["payload"]["info_value"]
+                                        self._media_artist += f" / {_country}"
+                                    elif _event.data["payload"]["info_type"] == 4:
+                                        self._media_title = _event.data["payload"][
+                                            "info_value"
+                                        ]
+                                elif (
+                                    _event.data["orig_src"] == "A.MEM"
+                                    or _event.data["orig_src"] == "N.MUSIC"
+                                    or _event.data["orig_src"] == "CD"
+                                ):
+                                    if _event.data["payload"]["info_type"] == 2:
+                                        self._media_album_name = _event.data["payload"][
+                                            "info_value"
+                                        ]
+                                    elif _event.data["payload"]["info_type"] == 3:
+                                        self._media_artist = _event.data["payload"][
+                                            "info_value"
+                                        ]
+                                    elif _event.data["payload"]["info_type"] == 4:
+                                        self._media_title = _event.data["payload"][
+                                            "info_value"
+                                        ]
+
+                # setup STATE ON/OFF through "beo4 key" events on the ML bus
+                if _event.data["to_device"] == "AUDIO_MASTER":
+                    if _event.data["payload_type"] == "BEO4_KEY":
+                        if self.source is not None:
+                            _statusID = self._sources[
+                                self._source_names.index(self.source)
+                            ]["statusID"]
+                            if _statusID == _event.data["payload"]["sourceID"]:
+                                if _event.data["payload"]["command"] == "Go / Play":
+                                    self._playing = True
+                                elif _event.data["payload"]["command"] == "Stop":
+                                    self._playing = False
 
         if self._gateway._connectedML:
             self._stop_listening = gateway._hass.bus.async_listen(
@@ -485,34 +532,36 @@ class BeoSpeaker(MediaPlayerEntity):
             return
         _statusID = self._sources[self._source_names.index(self._source)]["statusID"]
         if _statusID == sourceID:
-            #            if channel_track != self._media_channel:
-            self.clear_media_info()
+            if self._playing == False:
+                self._playing = True
 
-            if channel_track > 0:
-                # If it is a channel based source, set the channels otherwise the track
-                if ml_selectedsourcedict[_statusID] in [
-                    "TV",
-                    "DTV",
-                    "RADIO",
-                    "N.RADIO",
-                ]:
-                    self._media_channel = channel_track
-                else:
-                    self._media_track = channel_track
+            if channel_track == self._media_channel:  # no cange
+                return
 
-                # try to find the icons/names of the channels from the MLGW config file
-                _ch_name, _ch_icon = self.ch_number_to_name_and_icon(
-                    self._source, self._media_channel
-                )
-                if _ch_name is not None:
-                    self._media_title = f"{self._media_channel} - {_ch_name}"
-                self._media_image_url = _ch_icon
-
-            # if it is video source, set media type video otherwise music
+            # set the media type
             if _statusID in ml_selectedsource_type_dict["VIDEO"]:
+                self.clear_media_info()
                 self._media_content_type = MEDIA_TYPE_VIDEO
-            else:
+            elif _statusID in ml_selectedsource_type_dict["AUDIO"]:
+                self.clear_media_info()
                 self._media_content_type = MEDIA_TYPE_MUSIC
+            else:
+                return
+
+            # for channel based sources, set channel number and image
+            if ml_selectedsourcedict[_statusID] in ["TV", "DTV", "RADIO", "N.RADIO"]:
+                self._media_channel = channel_track
+                if channel_track > 0x00:
+                    _ch_name, _ch_icon = self.ch_number_to_name_and_icon(
+                        self._source, self._media_channel
+                    )
+                    self._media_title = f"{self._media_channel} - {_ch_name or '?'}"
+                    self._media_image_url = _ch_icon or ""
+                else:
+                    self._media_title = None
+            elif ml_selectedsourcedict[_statusID] in ["DVD", "DVD2", "CD", "N.MUSIC"]:
+                self._media_track = channel_track
+                self._media_title = f"Track {self._media_track}"
 
     def ch_number_to_name_and_icon(self, source, channel_track):
         # look up the caption corresponding to the command number of the favorites list
@@ -555,17 +604,19 @@ class BeoSpeaker(MediaPlayerEntity):
                 _statusID in ml_selectedsource_type_dict["AUDIO_PAUSABLE"]
                 or _statusID in ml_selectedsource_type_dict["VIDEO_PAUSABLE"]
             ):
-                support = support | SUPPORT_PLAY | SUPPORT_PAUSE
+                support = (
+                    support
+                    | SUPPORT_PLAY
+                    | SUPPORT_PAUSE
+                    | SUPPORT_SHUFFLE_SET
+                    | SUPPORT_REPEAT_SET
+                    | SUPPORT_STOP
+                )
         return support
 
     @property
-    def supported_media_commands(self):
-        """Flag of media commands that are supported."""
-        return SUPPORT_BEO
-
-    @property
     def source(self):
-        """ Name of the current input source."""
+        """Name of the current input source."""
         return self._source
 
     @property
@@ -662,9 +713,13 @@ class BeoSpeaker(MediaPlayerEntity):
                     self._gateway.beolink_source
                 ):
                     self.select_source(_x["name"])
-        elif self._source is not None:
+                    return
+
+        if self._source is not None:
             self.select_source(self._source)
-        elif len(self._source_names) > 0:
+            return
+
+        if len(self._source_names) > 0:
             self.select_source(self._source_names[0])
         _LOGGER.debug(
             "BeoSpeaker: turn on failed %s %s %s"

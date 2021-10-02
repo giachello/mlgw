@@ -202,6 +202,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     )
     if not gateway:
         return False
+
     hass.data[DOMAIN][MLGW_GATEWAY] = gateway
     hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
 
@@ -237,5 +238,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.services.async_remove(DOMAIN, SERVICE_VIRTUAL_BUTTON)
         gateway = hass.data[DOMAIN].pop(MLGW_GATEWAY)
         await gateway.terminate_async()
+    else:
+        _LOGGER.warning("Error Unloading Entries")
+        return False
 
     return True

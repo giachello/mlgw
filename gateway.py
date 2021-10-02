@@ -373,6 +373,8 @@ class MasterLinkGateway:
                     self.mlgw_ping()
                     self._lastping = 0
                 continue
+            except ConnectionResetError:
+                _LOGGER.warning("mlgw: socket connection reset")
 
             if response is not None and response != b"":
                 # Decode response. Response[0] is SOH, or 0x01
