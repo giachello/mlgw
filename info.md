@@ -6,8 +6,6 @@ Home Assistant custom component to integrate Bang & Olufsen MasterLink Gateway a
 
 This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. 
 
-# Minimal Configuration
-
 ## Minimum Home Assistant version
 
 MLGW is compatible with any version since 2021.1.1
