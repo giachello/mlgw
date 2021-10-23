@@ -4,6 +4,7 @@
   "version" : "2021.10.1",
   "config_flow": true,
   "documentation": "https://github.com/giachello/mlgw",
+  "issue_tracker": "https://github.com/giachello/mlgw/issues",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [ { "type":"_http._tcp.local." , "name":"*lgw*"}],
