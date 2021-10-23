@@ -15,7 +15,7 @@ This component connects to the MasterLink and Beolink Gateway and makes all your
 
 ## Installation
 
-Create a `mlgw` directory in `/config/custom_components/` and copy all the files in this repository into it.
+Create a `mlgw` directory in `/config/custom_components/` and copy all the files in the `/custom_components/mlgw` repository into it.
 
 
 ### Automatic configuration through Add Integrations (preferred)
