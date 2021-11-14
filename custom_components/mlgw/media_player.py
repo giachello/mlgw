@@ -36,6 +36,7 @@ from homeassistant.core import Event, CALLBACK_TYPE
 import logging
 import voluptuous as vol
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.entity import DeviceInfo
 import asyncio
 
 from homeassistant.const import (
@@ -589,6 +590,18 @@ class BeoSpeaker(MediaPlayerEntity):
     @property
     def name(self):
         return self._name
+
+    @property
+    def unique_id(self):
+        return f"mediaplayer-{self._mln}"
+
+    @property
+    def device_info(self):
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._mln)},
+            name=self._name,
+            manufacturer="Bang&Olufsen",
+        )
 
     @property
     def friendly_name(self):
