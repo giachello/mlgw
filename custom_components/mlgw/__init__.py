@@ -203,8 +203,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     if not gateway:
         return False
 
-    hass.data[DOMAIN][MLGW_GATEWAY] = gateway
-    hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
+    hass.data[DOMAIN][entry.entry_id] = {}
+    hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY] = gateway
+    hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
+    hass.data[DOMAIN][entry.entry_id]["serial"] = entry.unique_id
+    _LOGGER.debug("Serial: %s", entry.unique_id)
 
     for component in PLATFORMS:
         hass.async_create_task(
@@ -236,7 +239,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     )
     if unload_ok:
         hass.services.async_remove(DOMAIN, SERVICE_VIRTUAL_BUTTON)
-        gateway = hass.data[DOMAIN].pop(MLGW_GATEWAY)
+        gateway = hass.data[DOMAIN][entry.entry_id].pop(MLGW_GATEWAY)
         await gateway.terminate_async()
     else:
         _LOGGER.warning("Error Unloading Entries")

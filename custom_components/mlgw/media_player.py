@@ -123,8 +123,10 @@ async def async_setup_entry(
 ):
     hass.data.setdefault(DOMAIN, {})
 
-    mlgw_configurationdata = hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA]
-    gateway: MasterLinkGateway = hass.data[DOMAIN][MLGW_GATEWAY]
+    mlgw_configurationdata = hass.data[DOMAIN][config_entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA]
+    gateway: MasterLinkGateway = hass.data[DOMAIN][config_entry.entry_id][MLGW_GATEWAY]
+    serial = hass.data[DOMAIN][config_entry.entry_id]["serial"]
+    _LOGGER.debug("Serial (async_setup_entry): %s", serial)
     mp_devices = list()
 
     device_sequence = list()
@@ -170,6 +172,7 @@ async def async_setup_entry(
                     gateway,
                     device_source_names,
                     product["sources"],
+                    serial=serial,
                 )
                 mp_devices.append(beospeaker)
                 # Send a dummy command to the device. If the ML_LOG system is operating, then the MLGW will send a ML telegram
@@ -338,6 +341,7 @@ class BeoSpeaker(MediaPlayerEntity):
         gateway: MasterLinkGateway,
         source_names: list,
         sources: list,
+        serial = "",
     ):
         self._mln = mln
         self._ml = None
@@ -350,6 +354,7 @@ class BeoSpeaker(MediaPlayerEntity):
         self._stop_listening = None
         self._source_names = source_names
         self._sources = sources
+        self._serial = serial
 
         # information on the current track
         self.clear_media_info()
@@ -593,14 +598,14 @@ class BeoSpeaker(MediaPlayerEntity):
 
     @property
     def unique_id(self):
-        return f"mediaplayer-{self._mln}"
+        return f"{self._serial}-media_player-{self._mln}"
 
     @property
     def device_info(self):
         return DeviceInfo(
             identifiers={(DOMAIN, self._mln)},
             name=self._name,
-            manufacturer="Bang&Olufsen",
+            manufacturer="Bang & Olufsen",
         )
 
     @property
