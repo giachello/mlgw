@@ -341,7 +341,7 @@ class BeoSpeaker(MediaPlayerEntity):
         gateway: MasterLinkGateway,
         source_names: list,
         sources: list,
-        serial = "",
+        serial="",
     ):
         self._mln = mln
         self._ml = None
@@ -355,6 +355,7 @@ class BeoSpeaker(MediaPlayerEntity):
         self._source_names = source_names
         self._sources = sources
         self._serial = serial
+        self._unique_id = f"{self._serial}-media_player-{self._mln}"
 
         # information on the current track
         self.clear_media_info()
@@ -598,7 +599,7 @@ class BeoSpeaker(MediaPlayerEntity):
 
     @property
     def unique_id(self):
-        return f"{self._serial}-media_player-{self._mln}"
+        return self._unique_id
 
     @property
     def device_info(self):
