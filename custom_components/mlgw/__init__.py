@@ -18,6 +18,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, discovery
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import (
     DOMAIN,
@@ -208,6 +209,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
     hass.data[DOMAIN][entry.entry_id]["serial"] = entry.unique_id
     _LOGGER.debug("Serial: %s", entry.unique_id)
+
+    device_info = DeviceInfo(
+        identifiers={(DOMAIN, entry.unique_id)},
+        manufacturer="Bang & Olufsen",
+        name=mlgw_configurationdata["project"],
+        model="MasterLink Gateway",
+        config_entry_id=entry.entry_id,
+        configuration_url=f"http://{host}",
+    )
+    device_registry = await hass.helpers.device_registry.async_get_registry()
+    device_registry.async_get_or_create(**device_info)
 
     for component in PLATFORMS:
         hass.async_create_task(

@@ -607,6 +607,7 @@ class BeoSpeaker(MediaPlayerEntity):
             identifiers={(DOMAIN, self._mln)},
             name=self._name,
             manufacturer="Bang & Olufsen",
+            via_device=(DOMAIN, self._serial),
         )
 
     @property
