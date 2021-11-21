@@ -1,7 +1,7 @@
 {
   "domain": "mlgw",
   "name": "MasterLink Gateway",
-  "version" : "2021.10.3",
+  "version" : "2021.11.1",
   "config_flow": true,
   "documentation": "https://github.com/giachello/mlgw",
   "issue_tracker": "https://github.com/giachello/mlgw/issues",
@@ -13,6 +13,6 @@
   "after_dependencies": [ "media_player" ],
   "iot_class": "local_push",
   "codeowners": [
-    "@giachello", "@Lele-72"
+    "@giachello", "@Lele-72", "@astrandb"
   ]
 }
