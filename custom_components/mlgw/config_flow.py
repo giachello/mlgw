@@ -96,7 +96,7 @@ async def mlgw_get_xmpp_serial(_host: str) -> str:
 
 
 class CheckPasswordMLGWHub:
-    """Checks Password for the MLGW Hub and gets basic information. """
+    """Checks Password for the MLGW Hub and gets basic information."""
 
     def __init__(self, host):
         """Initialize."""
@@ -197,8 +197,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
+            await self.async_set_unique_id(info["sn"])
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(
-                title=("Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
+                title=("MasterLink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
                 data=user_input,
             )
 
@@ -276,7 +278,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
 
         return self.async_create_entry(
-            title=("Masterlink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
+            title=("MasterLink Gateway '%s' s/n %s" % (info["name"], info["sn"])),
             data={
                 CONF_HOST: self.host,
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
