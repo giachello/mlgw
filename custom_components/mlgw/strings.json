@@ -29,5 +29,11 @@
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
       "no_serial_number" : "Couldn't fetch serial number"
     }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "light_go": "Light-Go pressed",
+      "light_stop": "Light-Stop pressed"
+    }
   }
 }

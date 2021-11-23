@@ -30,5 +30,12 @@
             }
         }
     },
-    "title": "MasterLink Gateway"
+    "title": "MasterLink Gateway",
+    "device_automation": {
+        "trigger_type": {
+            "light_go": "Light-Go pressed",
+            "light_stop": "Light-Stop pressed"
+              }
+      }
+    
 }
