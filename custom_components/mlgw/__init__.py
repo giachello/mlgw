@@ -93,7 +93,7 @@ _LOGGER = logging.getLogger(__name__)
 # For your initial PR, limit it to 1 platform.
 PLATFORMS = ["media_player"]
 
-# This is the routine that is used when configuring from configuration.yaml
+
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the MasterLink Gateway from configuration.yaml."""
 

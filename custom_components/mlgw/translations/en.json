@@ -33,9 +33,16 @@
     "title": "MasterLink Gateway",
     "device_automation": {
         "trigger_type": {
-            "light_go": "Light-Go pressed",
-            "light_stop": "Light-Stop pressed"
-              }
-      }
-    
+            "light_go": "Light Go pressed",
+            "light_stop": "Light Stop pressed",
+            "light_digit_0": "Light 0 pressed",
+            "light_digit_1": "Light 1 pressed"
+              },
+        "action_type": {
+          "turn_on": "Turn on {entity_name}",
+          "turn_off": "Turn off {entity_name}"
+        }
+
+    }
+
 }

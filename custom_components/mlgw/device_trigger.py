@@ -11,7 +11,7 @@ from homeassistant.components.automation import (
     AutomationTriggerInfo,
 )
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import state
+from homeassistant.components.homeassistant.triggers import state, event as event_trigger
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -25,10 +25,10 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_registry
 from homeassistant.helpers.typing import ConfigType
 
-from . import DOMAIN
+from .const import DOMAIN, MLGW_EVENT_MLGW_TELEGRAM
 
 # TODO specify your supported trigger types.
-TRIGGER_TYPES = {"light_go", "light_stop"}
+TRIGGER_TYPES = {"light_go", "light_stop", "light_digit_0", "light_digit_1"}
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
@@ -71,8 +71,8 @@ async def async_get_triggers(
         CONF_DEVICE_ID: device_id,
         CONF_DOMAIN: DOMAIN,
     }
-    triggers.append({**base_trigger, CONF_TYPE: "light_go"})
-    triggers.append({**base_trigger, CONF_TYPE: "light_stop"})
+    for triggertype in TRIGGER_TYPES:
+        triggers.append({**base_trigger, CONF_TYPE: triggertype})
     _LOGGER.debug("Triggers: %s", triggers)
 
     return triggers
@@ -89,17 +89,15 @@ async def async_attach_trigger(
     # Use the existing state or event triggers from the automation integration.
 
     _LOGGER.debug("Attach trigger: %s", config[CONF_TYPE])
-    if config[CONF_TYPE] == "light_go":
-        to_state = STATE_ON
-    else:
-        to_state = STATE_OFF
-
-    state_config = {
-        state.CONF_PLATFORM: "state",
-        CONF_ENTITY_ID: config[CONF_ENTITY_ID],
-        state.CONF_TO: to_state,
+    # trigger_type = config[CONF_TYPE]
+    event_data = {CONF_DEVICE_ID: config[CONF_DEVICE_ID]}
+    event_config = {
+        event_trigger.CONF_PLATFORM: "event",
+        event_trigger.CONF_EVENT_DATA: event_data,
+        event_trigger.CONF_EVENT_TYPE: MLGW_EVENT_MLGW_TELEGRAM,
     }
-    state_config = state.TRIGGER_SCHEMA(state_config)
-    return await state.async_attach_trigger(
-        hass, state_config, action, automation_info, platform_type="device"
+
+    event_config = event_trigger.TRIGGER_SCHEMA(event_config)
+    return await event_trigger.async_attach_trigger(
+        hass, event_config, action, automation_info, platform_type="device"
     )
