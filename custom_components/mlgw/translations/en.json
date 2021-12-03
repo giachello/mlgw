@@ -2,7 +2,7 @@
     "config": {
         "abort": {
             "already_configured": "Device is already configured",
-            "no_serial_number" : "Couldn't fetch serial number"
+            "no_serial_number": "Couldn't fetch serial number"
         },
         "error": {
             "cannot_connect": "Failed to connect",
@@ -32,17 +32,27 @@
     },
     "title": "MasterLink Gateway",
     "device_automation": {
+        "trigger_subtype": {
+            "Digit-0": "0",
+            "Digit-1": "1",
+            "Digit-2": "2",
+            "Digit-3": "3",
+            "Digit-4": "4",
+            "Digit-5": "5",
+            "Digit-6": "6",
+            "Digit-7": "7",
+            "Digit-8": "8",
+            "Digit-9": "9",
+            "Go / Play": "Go/Play",
+            "Stop": "Stop"
+        },
         "trigger_type": {
-            "light_go": "Light Go pressed",
-            "light_stop": "Light Stop pressed",
-            "light_digit_0": "Light 0 pressed",
-            "light_digit_1": "Light 1 pressed"
-              },
+            "CONTROL": "Control + {subtype} pressed",
+            "LIGHT": "Light + {subtype} pressed"
+        },
         "action_type": {
-          "turn_on": "Turn on {entity_name}",
-          "turn_off": "Turn off {entity_name}"
+            "all_standby": "All Standby",
+            "virtual_button": "Press virtual button"
         }
-
     }
-
 }
