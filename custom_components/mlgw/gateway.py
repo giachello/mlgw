@@ -349,6 +349,10 @@ class MasterLinkGateway:
     def mlgw_send_virtual_btn_press(self, btn, act=0x01):
         self.mlgw_send(0x20, [btn, act])
 
+    def mlgw_send_all_standby(self):
+        self.mlgw_send_beo4_cmd(1, 0x0f, 0x0c)
+
+
     ## Get serial number of mlgw
     def mlgw_get_serial(self):
         if self._connectedMLGW:
@@ -507,6 +511,7 @@ class MasterLinkGateway:
                     decoded["room"] = lcroom
                     decoded["type"] = lctype
                     decoded["command"] = lccommand
+                    decoded["subtype"] = lccommand
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
         #                else:

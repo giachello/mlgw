@@ -7,3 +7,6 @@ virtual_button:
     action:
       description: "This parameter (available since MLGW SW 2.2) determines the button action: PRESS, HOLD, RELEASE. It defaults to PRESS."
       example: "PRESS"
+
+all_standby:
+  description: "Send global command All_Standby"

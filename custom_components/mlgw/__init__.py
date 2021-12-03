@@ -76,6 +76,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+SERVICE_ALL_STANDBY = "all_standby"
 SERVICE_VIRTUAL_BUTTON = "virtual_button"
 
 SERVICE_VIRTUAL_BUTTON_SCHEMA = vol.Schema(
@@ -84,7 +85,6 @@ SERVICE_VIRTUAL_BUTTON_SCHEMA = vol.Schema(
         vol.Optional(ATTR_MLGW_ACTION, default="PRESS"): cv.string,
     }
 )
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
         discovery.async_load_platform(hass, "media_player", DOMAIN, {}, mlgw_config)
     )
 
-    # Register the service
+    # Register the services
     hass.services.async_register(
         DOMAIN,
         SERVICE_VIRTUAL_BUTTON,
@@ -187,6 +187,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         gateway.mlgw_send_virtual_btn_press(service.data[ATTR_MLGW_BUTTON], act)
         return True
 
+    def send_all_standby(service: ServiceDataType):
+        if not gateway:
+            return False
+        gateway.mlgw_send_all_standby()
+
     host = entry.data.get(CONF_HOST)
     password = entry.data.get(CONF_PASSWORD)
     username = entry.data.get(CONF_USERNAME)
@@ -207,7 +212,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     hass.data[DOMAIN][entry.entry_id] = {}
     hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY] = gateway
-    hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
+    hass.data[DOMAIN][entry.entry_id][
+        MLGW_GATEWAY_CONFIGURATION_DATA
+    ] = mlgw_configurationdata
     hass.data[DOMAIN][entry.entry_id]["serial"] = entry.unique_id
     _LOGGER.debug("Serial: %s", entry.unique_id)
 
@@ -233,6 +240,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         SERVICE_VIRTUAL_BUTTON,
         virtual_button_press,
         schema=SERVICE_VIRTUAL_BUTTON_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "all_standby",
+        send_all_standby,
+        schema=vol.Schema({}),
     )
 
     return True
