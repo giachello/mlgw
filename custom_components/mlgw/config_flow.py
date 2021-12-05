@@ -28,6 +28,7 @@ from .const import (
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+_Discovered_MLGW : dict = { }
 
 # Data schema for the configuration flows
 USER_STEP_DATA_SCHEMA = vol.Schema(
@@ -59,8 +60,24 @@ def host_valid(host):
 
     ## Get serial number of mlgw
 
+# Get the MLGW/BLGW Serial number from the integrated Jabber Client
+#
+# This code causes the MLGW to crash if called too many times. Given that it is called every time there is 
+# a zeroconf discovery (every few mins), after a week or so it causes the device to crash. So, we cache the 
+# SN based on the host address.
+#
+# This is an undocumented feature of the MLGW. The Traffic looks like:
+#
+# # $ nc 192.168.1.10 5222
+# <?xml version='1.0'?><stream:stream to='products.bang-olufsen.com' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'></stream:stream>
+# <stream:stream xmlns="jabber:client" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" from="7060.2706081.22996958@products.bang-olufsen.com">
 
 async def mlgw_get_xmpp_serial(_host: str) -> str:
+
+    if _host in _Discovered_MLGW:
+        _LOGGER.info("XMPP found cached sn")
+        return _Discovered_MLGW[_host]
+
     _LOGGER.info("XMPP connect to MLGW: Open")
     # open socket to masterlink gateway
     _socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,15 +85,15 @@ async def mlgw_get_xmpp_serial(_host: str) -> str:
     try:
         _socket.connect((_host, 5222))
     except Exception as e:
-        _LOGGER.error("Error opening XMPP connection to MLGW (%s): %s" % (_host, e))
+        _LOGGER.error("Error opening XMPP to MLGW (%s): %s" % (_host, e))
         _socket.close()
         return None
     # Request serial number to mlgw
     _telegram = (
         "<?xml version='1.0'?>"
         "<stream:stream to='products.bang-olufsen.com' version='1.0' "
-        "xmlns='jabber:client' "
-        "xmlns:stream='http://etherx.jabber.org/streams'>"
+        "xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>"
+        "</stream:stream>"
     )
     ## Receive serial number string from mlgw
     sn = None
@@ -90,7 +107,9 @@ async def mlgw_get_xmpp_serial(_host: str) -> str:
         _LOGGER.error("Error receiving MLGW info from %s: %s" % (_host, e))
         _socket.close()
 
-    _LOGGER.info("XMPP connect to MLGW: SN %s" % (sn))
+    _LOGGER.info("XMPP got MLGW SN: %s" % (sn))
+
+    _Discovered_MLGW[_host] = sn
 
     return sn
 
