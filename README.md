@@ -15,7 +15,8 @@ This component connects to the MasterLink and Beolink Gateway and makes all your
 
 ## Installation
 
-Create a `mlgw` directory in `/config/custom_components/` and copy all the files in the `/custom_components/mlgw` repository into it.
+* With HACS: go to your HACS download panel, search for "MasterLink Gateway" and download from there. You need to restart.
+* Manually: Create a `mlgw` directory in `/config/custom_components/` and copy all the files in the `/custom_components/mlgw` repository into it.
 
 
 ### Automatic configuration through Add Integrations (preferred)
