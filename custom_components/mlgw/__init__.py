@@ -1,5 +1,6 @@
 """The MasterLink Gateway integration."""
 import asyncio
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ServiceDataType
 from .gateway import create_mlgw_gateway, create_mlgw_gateway_with_configuration_data
 from .media_player import BeoSpeaker
@@ -218,7 +219,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         config_entry_id=entry.entry_id,
         configuration_url=f"http://{host}",
     )
-    device_registry = await hass.helpers.device_registry.async_get_registry()
+    device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(**device_info)
 
     for component in PLATFORMS:

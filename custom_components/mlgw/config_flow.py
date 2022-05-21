@@ -62,8 +62,8 @@ def host_valid(host):
 
 # Get the MLGW/BLGW Serial number from the integrated Jabber Client
 #
-# This code causes the MLGW to crash if called too many times. Given that it is called every time there is 
-# a zeroconf discovery (every few mins), after a week or so it causes the device to crash. So, we cache the 
+# This code causes the MLGW to crash if called too many times. Given that it is called every time there is
+# a zeroconf discovery (every few mins), after a week or so it causes the device to crash. So, we cache the
 # SN based on the host address.
 #
 # This is an undocumented feature of the MLGW. The Traffic looks like:
@@ -235,17 +235,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.debug("Async_Step_Zeroconf discovery info %s" % discovery_info)
 
         # if it's not a MLGW or BLGW device, then abort
-        if not discovery_info.get("name"):
+        if not discovery_info.name:
             return self.async_abort(reason="not_mlgw_device")
 
         if not (
-            discovery_info["name"].startswith("MLGW")
-            or discovery_info["name"].startswith("BLGW")
+            discovery_info.name.startswith("MLGW")
+            or discovery_info.name.startswith("BLGW")
         ):
             return self.async_abort(reason="not_mlgw_device")
 
         # Hostname is format: mlgw.local.
-        self.host = discovery_info["hostname"].rstrip(".")
+        self.host = discovery_info.hostname.rstrip(".")
         _LOGGER.debug("Async_Step_Zeroconf Hostname %s" % self.host)
 
         try:
