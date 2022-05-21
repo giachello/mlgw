@@ -218,7 +218,6 @@ class MasterLinkGateway:
                     encoded_telegram["bytes"] = "".join(
                         "{:02x}".format(x) for x in telegram
                     )
-                    _LOGGER.debug("ML telegram: %s", encoded_telegram)
 
                     # try to find the mln of the from_device and to_device
                     if self._devices is not None:
@@ -232,6 +231,8 @@ class MasterLinkGateway:
                     # this only tracks the primary beolink source, doesn't track local sources
                     if encoded_telegram["payload_type"] == "GOTO_SOURCE":
                         self._beolink_source = encoded_telegram["payload"]["source"]
+
+                    _LOGGER.info("ML telegram: %s", encoded_telegram)
 
                     self._hass.add_job(
                         self._notify_incoming_ML_telegram, encoded_telegram
