@@ -96,7 +96,7 @@ class MasterLinkGateway:
     async def terminate_async(self):
         self.stopped.set()
 
-    def ml_connect(self):
+    async def ml_connect(self):
         _LOGGER.info("Trying to connect to ML CLI: %s" % (self._host))
         self._connectedML = False
 
@@ -108,9 +108,9 @@ class MasterLinkGateway:
                 _LOGGER.debug("Unexpected login prompt: %s" % (line))
                 raise ConnectionError
             # put some small pauses to see if we can avoid occasional login problems
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
             self._tn.write(self._password.encode("ascii") + b"\n")
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
             # Try to read until we hit the command prompt.
             # BLGW has a "BLGW >" prompt. MLGW has a "MLGW >" prompt
@@ -559,7 +559,7 @@ async def create_mlgw_gateway(
     )
 
     if use_mllog == True:
-        gateway.ml_connect()
+        await gateway.ml_connect()
 
     gateway.mlgw_connect()
 
@@ -579,7 +579,7 @@ async def create_mlgw_gateway_with_configuration_data(
     gateway = MasterLinkGateway(host, port, username, password, None, None, hass)
 
     if use_mllog == True:
-        gateway.ml_connect()
+        await gateway.ml_connect()
 
     gateway.mlgw_connect()
 
