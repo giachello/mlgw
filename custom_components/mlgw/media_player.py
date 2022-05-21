@@ -104,6 +104,7 @@ from .const import (
     CONF_MLGW_DEVICE_MLID,
     CONF_MLGW_USE_MLLOG,
     MLGW_EVENT_ML_TELEGRAM,
+    ML_ID_TIMEOUT,
 )
 
 from .gateway import MasterLinkGateway
@@ -131,6 +132,7 @@ async def async_setup_entry(
 
     device_sequence = list()
     ml_listener_iteration: int = 0
+    ml_devices_scanned: int = 0
     stop_listening: CALLBACK_TYPE = None
 
     def _message_listener(_event: Event):
@@ -187,6 +189,7 @@ async def async_setup_entry(
                         reverse_ml_destselectordict.get("AUDIO SOURCE"),
                         BEO4_CMDS.get("LIGHT TIMEOUT"),
                     )
+                    ml_devices_scanned = ml_devices_scanned + 1
 
         async_add_entities(mp_devices, True)
         gateway.set_devices(
@@ -196,7 +199,7 @@ async def async_setup_entry(
         # wait for 10 seconds or until all the devices have reported back their ML address
         if gateway._connectedML:
             waiting_for = 0.0
-            while ml_listener_iteration < len(gateway._devices) and waiting_for < 10:
+            while ml_listener_iteration < ml_devices_scanned and waiting_for < ML_ID_TIMEOUT:
                 await asyncio.sleep(0.1)
                 waiting_for = waiting_for + 0.1
             stop_listening()  # clean up the listener for the device codes.
@@ -218,6 +221,7 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
     mp_devices = list()
 
     ml_listener_iteration: int = 0
+    ml_devices_scanned: int = 0
     stop_listening: CALLBACK_TYPE = None
 
     def _message_listener(_event: Event):
@@ -293,16 +297,17 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
                     reverse_ml_destselectordict.get("AUDIO SOURCE"),
                     BEO4_CMDS.get("LIGHT TIMEOUT"),
                 )
+                ml_devices_scanned = ml_devices_scanned + 1
 
         add_devices(mp_devices)
         gateway.set_devices(
             mp_devices
         )  # tell the gateway the list of devices connected to it.
 
-        # wait for 10 seconds or until all the devices have reported back their ML address
+        # wait for ML_ID_TIMEOUT seconds or until all the devices have reported back their ML address
         if gateway._connectedML:
             waiting_for = 0.0
-            while ml_listener_iteration < len(gateway._devices) and waiting_for < 10:
+            while ml_listener_iteration < ml_devices_scanned and waiting_for < ML_ID_TIMEOUT:
                 await asyncio.sleep(0.1)
                 waiting_for = waiting_for + 0.1
             stop_listening()  # clean up the listener for the device codes.

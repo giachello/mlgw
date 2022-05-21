@@ -22,7 +22,7 @@ MLGW_GATEWAY_CONFIGURATION_DATA = "MLGW_GATEWAY_CONFIG_DATA"
 BASE_URL = "http://{0}/{1}"
 MLGW_CONFIG_JSON_PATH = "mlgwpservices.json"
 TIMEOUT = 5.0
-
+ML_ID_TIMEOUT = 5           # the number of seconds we wait to get back all the ML IDs. 
 
 # ########################################################################################
 # ##### Events

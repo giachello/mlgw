@@ -123,7 +123,7 @@ class MasterLinkGateway:
                 attempts = attempts + 1
                 if line[-5:] == b"LGW >":
                     break
-                time.sleep(0.5)
+                await asyncio.time.sleep(0.5)
 
             if line[-5:] != b"LGW >":
                 _LOGGER.debug("Unexpected CLI prompt: %s" % (line))
@@ -307,8 +307,8 @@ class MasterLinkGateway:
                 + _getpayloadstr(self._telegram)
             )  # debug
 
-            # Sleep to allow msg to arrive
-            time.sleep(1)
+            # Sleep to allow msg to arrive - Unclear we actually need this, removed sleep
+#            time.sleep(1) 
 
     ## Send Beo4 command to mlgw
     def mlgw_send_beo4_cmd(self, mln, dest, cmd, sec_source=0x00, link=0x00):
