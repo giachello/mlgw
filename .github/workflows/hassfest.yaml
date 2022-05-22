@@ -1,10 +1,13 @@
 name: Validate with hassfest
 
 on:
-  push:
-  pull_request:
-  schedule:
-    - cron: "0 0 * * *"
+#  push:
+#  pull_request:
+  release:
+    types: [published]  
+  workflow_dispatch:
+#  schedule:
+#    - cron: "0 0 * * *"
 
 jobs:
   validate:
