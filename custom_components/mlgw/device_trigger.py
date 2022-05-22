@@ -17,8 +17,9 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, MLGW_EVENT_MLGW_TELEGRAM
 
+PAYLOAD_LIGHT_CONTROL_EVENT = "light_control_event"
 CONF_PAYLOAD_TYPE = "payload_type"
-CONF_PAYLOAD_TYPES = {"light_control_event"}
+CONF_PAYLOAD_TYPES = {PAYLOAD_LIGHT_CONTROL_EVENT}
 TRIGGER_TYPES = {"LIGHT"}
 LIGHT_COMMAND = "subtype"
 LIGHT_COMMANDS = [
@@ -66,7 +67,7 @@ async def async_get_triggers(
                 triggers.append(
                     {
                         **base_trigger,
-                        CONF_PAYLOAD_TYPE: "light_control_event",
+                        CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
                         CONF_TYPE: triggertype,
                         LIGHT_COMMAND: light_command,
                     }
@@ -84,7 +85,7 @@ async def async_attach_trigger(
     """Attach a trigger."""
 
     event_data = {
-        "payload_type": "light_control_event",
+        CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
         CONF_TYPE: config[CONF_TYPE],
         LIGHT_COMMAND: config[LIGHT_COMMAND],
     }
