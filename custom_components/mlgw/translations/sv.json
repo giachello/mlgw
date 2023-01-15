@@ -1,32 +1,32 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Device is already configured",
-            "no_serial_number": "Couldn't fetch serial number"
+            "already_configured": "Enheten är redan konfigurerad",
+            "no_serial_number": "Gick en att hämta serienummer"
         },
         "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error",
-            "invalid_host": "Invalid host format"
+            "cannot_connect": "Går ej att ansluta",
+            "invalid_auth": "Ogiltig autentisering",
+            "unknown": "Oväntat fel",
+            "invalid_host": "Ogiltigt värdnamn"
         },
         "step": {
             "user": {
                 "data": {
-                    "host": "Host",
-                    "password": "Password",
-                    "username": "Username",
-                    "use_mllog": "Use Undocumented MasterLink Bus Feature"
+                    "host": "Värd",
+                    "password": "Lösenord",
+                    "username": "Användarnamn",
+                    "use_mllog": "Använd odokumenterade funktioner för MasterLink Bus"
                 }
             },
             "zeroconf_confirm": {
                 "data": {
-                    "password": "Password",
-                    "username": "Username",
-                    "use_mllog": "Use Undocumented MasterLink Bus Feature"
+                    "password": "Lösenord",
+                    "username": "Användarnamn",
+                    "use_mllog": "Använd odokumenterade funktioner för MasterLink Bus"
                 },
-                "description": "Do you want to add {name} to Home Assistant?",
-                "title": "Discovered MLGW device"
+                "description": "Vill du lägga till {name} till Home Assistant?",
+                "title": "Upptäckt MLGW-enhet"
             }
         }
     },
@@ -112,12 +112,12 @@
             "Command": "Command"
         },
         "trigger_type": {
-            "CONTROL": "Control + {subtype} pressed",
-            "LIGHT": "Light + {subtype} pressed"
+            "CONTROL": "Control + {subtype} nedtryckt",
+            "LIGHT": "Light + {subtype} nedtryckt"
         },
         "action_type": {
             "all_standby": "All Standby",
-            "virtual_button": "Press virtual button"
+            "virtual_button": "Tryck virtuell knapp"
         }
     }
 }
