@@ -1,18 +1,31 @@
 {
   "domain": "mlgw",
   "name": "MasterLink Gateway",
-  "version" : "2023.1.1",
+  "version": "2023.1.1",
   "config_flow": true,
   "documentation": "https://github.com/giachello/mlgw",
   "issue_tracker": "https://github.com/giachello/mlgw/issues",
   "requirements": [],
   "ssdp": [],
-  "zeroconf": [ { "type":"_http._tcp.local." , "name":"*lgw*"}],
+  "zeroconf": [
+    {
+      "type": "_http._tcp.local.",
+      "name": "*lgw*"
+    }
+  ],
   "homekit": {},
-  "dependencies": ["http", "zeroconf"],
-  "after_dependencies": [ "media_player" ],
+  "dependencies": [
+    "http",
+    "zeroconf"
+  ],
+  "after_dependencies": [
+    "media_player"
+  ],
   "iot_class": "local_push",
   "codeowners": [
-    "@giachello", "@Lele-72", "@astrandb"
-  ]
+    "@giachello",
+    "@Lele-72",
+    "@astrandb"
+  ],
+  "integration_type": "hub"
 }
