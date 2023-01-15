@@ -224,9 +224,12 @@ class MasterLinkGateway:
                         for x in self._devices:
                             if x._ml == encoded_telegram["from_device"]:
                                 encoded_telegram["from_mln"] = x._mln
+                                encoded_telegram["from_name"] = x.name  
+                                encoded_telegram["from_entity_id"] = x.entity_id  
                             if x._ml == encoded_telegram["to_device"]:
                                 encoded_telegram["to_mln"] = x._mln
-
+                                encoded_telegram["to_name"] = x.name  
+                                encoded_telegram["to_entity_id"] = x.entity_id
                     # if a GOTO Source telegram is received, set the beolink source to it
                     # this only tracks the primary beolink source, doesn't track local sources
                     if encoded_telegram["payload_type"] == "GOTO_SOURCE":
