@@ -123,7 +123,7 @@ async def async_get_triggers(
 ) -> list[dict[str, Any]]:
     """List device triggers for mlgw integration devices."""
 
-    registry = await entity_registry.async_get_registry(hass)
+    registry = entity_registry.async_get(hass)
     triggers = []
 
     if not entity_registry.async_entries_for_device(registry, device_id):
