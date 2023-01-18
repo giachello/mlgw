@@ -37,7 +37,7 @@ async def async_get_actions(
     hass: HomeAssistant, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for aketest_integration devices."""
-    registry = await entity_registry.async_get_registry(hass)
+    registry = entity_registry.async_get(hass)
     actions = []
 
     if not entity_registry.async_entries_for_device(registry, device_id):
