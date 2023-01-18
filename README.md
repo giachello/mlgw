@@ -6,7 +6,7 @@ This component integrates Bang & Olufsen Master Link Gateway and Beolink Gateway
 
 [BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
 
-This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported through the gateway, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) instead which natively supports the more advanced NL features.
+This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported through the gateway, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) instead to control media, because it natively supports more advanced NL features and has more reliable reporting of volume, media playback... You can of course use MLGW and BeoPlay at the same time. In that case, use MLGW to process the Light commands. 
 
 ![Mini Media Player](./mini_media_player.png)
 
