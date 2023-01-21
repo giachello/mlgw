@@ -192,6 +192,7 @@ async def async_create_devices(mlgw_configurationdata, gateway, async_add_entiti
                     product["MLN"],
                     product["name"],
                     zone["number"],
+                    zone["name"],
                     gateway,
                     device_source_names,
                     product["sources"],
@@ -255,7 +256,8 @@ class BeoSpeaker(MediaPlayerEntity):
         self,
         mln,
         name,
-        room,
+        roomNumber,
+        roomName,
         gateway: MasterLinkGateway,
         source_names: list,
         sources: list,
@@ -264,7 +266,8 @@ class BeoSpeaker(MediaPlayerEntity):
         self._mln = mln
         self._ml = None
         self._name = name
-        self._room = room
+        self._roomNumber = roomNumber
+        self._roomName = roomName
         self._gateway = gateway
         self._pwon = False
         self._playing = False
@@ -526,6 +529,7 @@ class BeoSpeaker(MediaPlayerEntity):
             name=self._name,
             manufacturer="Bang & Olufsen",
             via_device=(DOMAIN, self._serial),
+            suggested_area = self._roomName,
         )
 
     @property

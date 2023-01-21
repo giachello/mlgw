@@ -1,4 +1,14 @@
-"""Provides device triggers for mlgw integration."""
+"""
+    Provides device triggers for the MasterLink Gateway integration.
+
+    Triggers include:
+    * Control
+    * Light
+    for commonly used keys on the beo4 remote.
+
+    Triggers will also include the room name or number (if no name is available).
+
+"""
 from __future__ import annotations
 
 from typing import Any
