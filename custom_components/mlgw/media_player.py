@@ -111,26 +111,47 @@ from .gateway import MasterLinkGateway
 
 _LOGGER = logging.getLogger(__name__)
 
-# Set up the Media_player devices. there are two ways, through the manual configuration in configuration.yaml and through a config flow that automatically reads the devices list from the mlgw.
+# Set up the Media_player devices. there are two ways, through the manual configuration in configuration.yaml 
+# and through a config flow that automatically reads the devices list from the mlgw.
 
 # #########################################################################################
-#  devices through automatic configuration
-
-
+#
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities,
 ):
+    """Add MLGW devices through Config Entry"""
+
     hass.data.setdefault(DOMAIN, {})
 
     mlgw_configurationdata = hass.data[DOMAIN][config_entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA]
     gateway: MasterLinkGateway = hass.data[DOMAIN][config_entry.entry_id][MLGW_GATEWAY]
     serial = hass.data[DOMAIN][config_entry.entry_id]["serial"]
     _LOGGER.debug("Serial (async_setup_entry): %s", serial)
+
+    await async_create_devices(mlgw_configurationdata, gateway, async_add_entities, serial)
+
+# #########################################################################################
+# 
+async def async_setup_platform(hass, config, add_devices, discovery_info=None):
+    """Add MLGW devices through manual configuration"""
+    hass.data.setdefault(DOMAIN, {})
+
+    mlgw_configurationdata = hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA]
+    gateway: MasterLinkGateway = hass.data[DOMAIN][MLGW_GATEWAY]
+
+    await async_create_devices(mlgw_configurationdata, gateway, add_devices, DOMAIN)
+
+
+# #########################################################################################
+#
+async def async_create_devices(mlgw_configurationdata, gateway, async_add_entities, serial=""):
+    """Read the configuration data from the gateway, and create the devices"""
     mp_devices = list()
 
     device_sequence = list()
+
     ml_listener_iteration: int = 0
     ml_devices_scanned: int = 0
     stop_listening: CALLBACK_TYPE = None
@@ -191,120 +212,12 @@ async def async_setup_entry(
                     )
                     ml_devices_scanned = ml_devices_scanned + 1
 
-        async_add_entities(mp_devices, True)
+        async_add_entities(mp_devices)
         gateway.set_devices(
             mp_devices
         )  # tell the gateway the list of devices connected to it.
 
         # wait for 10 seconds or until all the devices have reported back their ML address
-        if gateway._connectedML:
-            waiting_for = 0.0
-            while ml_listener_iteration < ml_devices_scanned and waiting_for < ML_ID_TIMEOUT:
-                await asyncio.sleep(0.1)
-                waiting_for = waiting_for + 0.1
-            stop_listening()  # clean up the listener for the device codes.
-            _LOGGER.info("got back the ml Ids")
-
-    else:
-        _LOGGER.error("MLGW Not connected while trying to add media_player devices")
-
-
-# #########################################################################################
-# devices through manual configuration
-
-
-async def async_setup_platform(hass, config, add_devices, discovery_info=None):
-    hass.data.setdefault(DOMAIN, {})
-
-    manual_devices = hass.data[DOMAIN][MLGW_DEVICES]
-    gateway: MasterLinkGateway = hass.data[DOMAIN][MLGW_GATEWAY]
-    mp_devices = list()
-
-    ml_listener_iteration: int = 0
-    ml_devices_scanned: int = 0
-    stop_listening: CALLBACK_TYPE = None
-
-    def _message_listener(_event: Event):
-        nonlocal ml_listener_iteration
-        if (
-            _event.data["from_device"] == "MLGW"
-            and _event.data["payload_type"] == "MLGW_REMOTE_BEO4"
-            and _event.data["payload"]["command"] == "Light Timeout"
-        ):
-            _LOGGER.info(
-                "ML LOG returned ML id %s for MLN %s"
-                % (
-                    _event.data["to_device"],
-                    str(gateway._devices[ml_listener_iteration]._mln),
-                )
-            )
-            gateway._devices[ml_listener_iteration].set_ml(_event.data["to_device"])
-            ml_listener_iteration = ml_listener_iteration + 1
-
-    if gateway.connectedMLGW:
-
-        # listen to ML messages to track down the actual ML id of the device
-        if gateway._connectedML:
-            stop_listening = gateway._hass.bus.async_listen(
-                MLGW_EVENT_ML_TELEGRAM, _message_listener
-            )
-
-        i = 1
-        for device in manual_devices:
-            if CONF_MLGW_DEVICE_MLN in device.keys():
-                mln = device[CONF_MLGW_DEVICE_MLN]
-            else:
-                mln = i
-            i = i + 1
-            _LOGGER.info(
-                "Adding device: %s at mln: %s"
-                % (device[CONF_MLGW_DEVICE_NAME], str(mln))
-            )
-            room = None
-            if CONF_MLGW_DEVICE_ROOM in device.keys():
-                room = device[CONF_MLGW_DEVICE_ROOM]
-            ml = None
-            if CONF_MLGW_DEVICE_MLID in device.keys():
-                ml = device[CONF_MLGW_DEVICE_MLID]
-
-            device_sources = list()
-            for _x in gateway.available_sources:
-                _source = dict()
-                _source["name"] = _x
-                _source["destination"] = reverse_ml_destselectordict.get("AUDIO SOURCE")
-                _source["format"] = "F0"
-                _source["secondary"] = 0
-                _source["link"] = 0
-                _source["statusID"] = reverse_ml_selectedsourcedict.get(_x)
-                _source["selectID"] = BEO4_CMDS.get(_x)
-                _source["selectCmds"] = list()
-                _source["selectCmds"].append({"cmd": BEO4_CMDS.get(_x), "format": "F0"})
-                device_sources.append(_source)
-
-            beospeaker = BeoSpeaker(
-                mln,
-                device[CONF_MLGW_DEVICE_NAME],
-                room,
-                gateway,
-                gateway.available_sources,
-                device_sources,
-            )
-            beospeaker.set_ml(ml)
-            mp_devices.append(beospeaker)
-            if gateway._connectedML:
-                gateway.mlgw_send_beo4_cmd(
-                    beospeaker._mln,
-                    reverse_ml_destselectordict.get("AUDIO SOURCE"),
-                    BEO4_CMDS.get("LIGHT TIMEOUT"),
-                )
-                ml_devices_scanned = ml_devices_scanned + 1
-
-        add_devices(mp_devices)
-        gateway.set_devices(
-            mp_devices
-        )  # tell the gateway the list of devices connected to it.
-
-        # wait for ML_ID_TIMEOUT seconds or until all the devices have reported back their ML address
         if gateway._connectedML:
             waiting_for = 0.0
             while ml_listener_iteration < ml_devices_scanned and waiting_for < ML_ID_TIMEOUT:

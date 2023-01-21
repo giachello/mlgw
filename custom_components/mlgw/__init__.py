@@ -2,7 +2,8 @@
 import asyncio
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ServiceDataType
-from .gateway import create_mlgw_gateway, create_mlgw_gateway_with_configuration_data
+from .gateway import create_mlgw_gateway, MasterLinkGateway
+from .const import reverse_ml_destselectordict, reverse_ml_selectedsourcedict, BEO4_CMDS
 from .media_player import BeoSpeaker
 import logging
 import json
@@ -93,18 +94,53 @@ _LOGGER = logging.getLogger(__name__)
 # For your initial PR, limit it to 1 platform.
 PLATFORMS = ["media_player"]
 
+def yaml_to_json_config(manual_devices, availabe_sources):
+    result = dict()
+    i = 1
+    for device in manual_devices:
+        if CONF_MLGW_DEVICE_MLN in device.keys():
+            mln = device[CONF_MLGW_DEVICE_MLN]
+        else:
+            mln = i
+        i = i + 1
+        room = 0
+        if CONF_MLGW_DEVICE_ROOM in device.keys():
+            room = device[CONF_MLGW_DEVICE_ROOM]
+        ml = None
+        if CONF_MLGW_DEVICE_MLID in device.keys():
+            ml = device[CONF_MLGW_DEVICE_MLID]
+
+        if result["zones"][room] is None:
+            result["zones"][room] = list()
+        
+        if result["zones"][room]["products"] is None:
+            result["zones"][room]["products"] = list()
+
+        product = dict()
+        product["MLN"] = mln
+        product["ML"] = ml
+        product["name"] = device[CONF_MLGW_DEVICE_NAME]
+
+        device_sources = list()
+        for _x in availabe_sources:
+            _source = dict()
+            _source["name"] = _x
+            _source["destination"] = reverse_ml_destselectordict.get("AUDIO SOURCE")
+            _source["format"] = "F0"
+            _source["secondary"] = 0
+            _source["link"] = 0
+            _source["statusID"] = reverse_ml_selectedsourcedict.get(_x)
+            _source["selectID"] = BEO4_CMDS.get(_x)
+            _source["selectCmds"] = list()
+            _source["selectCmds"].append({"cmd": BEO4_CMDS.get(_x), "format": "F0"})
+            device_sources.append(_source)
+
+        product["sources"] = device_sources
+        result["zones"][room]["products"].append(product)
+
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the MasterLink Gateway from configuration.yaml."""
-
-    def virtual_button_press(service: ServiceDataType):
-        if not gateway:
-            return False
-        act = reverse_mlgw_virtualactiondict.get(service.data[ATTR_MLGW_ACTION])
-        if act is None:
-            act = 0x01
-        gateway.mlgw_send_virtual_btn_press(service.data[ATTR_MLGW_BUTTON], act)
-        return True
 
     hass.data.setdefault(DOMAIN, {})
     mlgw_config = config.get(DOMAIN, {})
@@ -118,37 +154,32 @@ async def async_setup(hass: HomeAssistant, config: dict):
     hass.data[DOMAIN][MLGW_DEVICES] = mlgw_config.get(CONF_DEVICES)
     default_source = mlgw_config.get(CONF_MLGW_DEFAULT_SOURCE)
     available_sources = mlgw_config.get(CONF_MLGW_AVAILABLE_SOURCES)
+
     if user == "admin":
         use_mllog = mlgw_config.get(CONF_MLGW_USE_MLLOG)
     else:
         use_mllog = False
 
+    mlgw_configurationdata = yaml_to_json_config(hass.data[DOMAIN][MLGW_DEVICES])
+    mlgw_configurationdata["port"] = port 
+
+    if mlgw_configurationdata is None:
+        return False
+
     gateway = await create_mlgw_gateway(
-        host, port, user, password, default_source, available_sources, use_mllog, hass
+        hass, host, port, user, password, use_mllog, default_source, available_sources
     )
     if not gateway:
         return False
     hass.data[DOMAIN][MLGW_GATEWAY] = gateway
+    hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
 
     hass.async_create_task(
         discovery.async_load_platform(hass, "media_player", DOMAIN, {}, mlgw_config)
     )
 
-    # Register the services
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_VIRTUAL_BUTTON,
-        virtual_button_press,
-        schema=SERVICE_VIRTUAL_BUTTON_SCHEMA,
-    )
+    register_services()
 
-    #    hass.async_create_task(
-    #        hass.config_entries.flow.async_init(
-    #            DOMAIN,
-    #            context={"source": SOURCE_IMPORT},
-    #            data=mlgw_config,
-    #        )
-    #    )
     return True
 
 
@@ -174,9 +205,7 @@ def get_mlgw_configuration_data(host: str, username: str, password: str):
 
     return response.json()
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up MasterLink Gateway from a config entry."""
+def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
 
     def virtual_button_press(service: ServiceDataType):
         if not gateway:
@@ -192,6 +221,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             return False
         gateway.mlgw_send_all_standby()
 
+    # Register the services
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_VIRTUAL_BUTTON,
+        virtual_button_press,
+        schema=SERVICE_VIRTUAL_BUTTON_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "all_standby",
+        send_all_standby,
+        schema=vol.Schema({}),
+    )
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up MasterLink Gateway from a config entry."""
+
     host = entry.data.get(CONF_HOST)
     password = entry.data.get(CONF_PASSWORD)
     username = entry.data.get(CONF_USERNAME)
@@ -204,8 +251,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     if mlgw_configurationdata is None:
         return False
 
-    gateway = await create_mlgw_gateway_with_configuration_data(
-        host, username, password, use_mllog, mlgw_configurationdata, hass
+    gateway = await create_mlgw_gateway(
+        hass, host, mlgw_configurationdata["port"], username, password, use_mllog
     )
     if not gateway:
         return False
@@ -223,6 +270,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         manufacturer="Bang & Olufsen",
         name=mlgw_configurationdata["project"],
         model="MasterLink Gateway",
+        hw_version=mlgw_configurationdata["version"],
         config_entry_id=entry.entry_id,
         configuration_url=f"http://{host}",
     )
@@ -234,20 +282,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
 
-    # Register the service
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_VIRTUAL_BUTTON,
-        virtual_button_press,
-        schema=SERVICE_VIRTUAL_BUTTON_SCHEMA,
-    )
-
-    hass.services.async_register(
-        DOMAIN,
-        "all_standby",
-        send_all_standby,
-        schema=vol.Schema({}),
-    )
+    register_services()
 
     return True
 

@@ -552,39 +552,19 @@ class MasterLinkGateway:
 
 
 async def create_mlgw_gateway(
+    hass: HomeAssistant,
     host,
     port,
     user,
     password,
-    default_source,
-    available_sources,
     use_mllog,
-    hass: HomeAssistant,
+    default_source = None,
+    available_sources = None,
 ):
     """Create the mlgw gateway."""
     gateway = MasterLinkGateway(
         host, port, user, password, default_source, available_sources, hass
     )
-
-    if use_mllog == True:
-        await gateway.ml_connect()
-
-    gateway.mlgw_connect()
-
-    def _stop_listener(_event):
-        gateway.stopped.set()
-
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_listener)
-
-    return gateway
-
-
-async def create_mlgw_gateway_with_configuration_data(
-    host, username, password, use_mllog, mlgw_configurationdata, hass
-):
-    port = mlgw_configurationdata["port"]
-
-    gateway = MasterLinkGateway(host, port, username, password, None, None, hass)
 
     if use_mllog == True:
         await gateway.ml_connect()
