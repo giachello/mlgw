@@ -1,4 +1,8 @@
-"""Provides device actions for aketest_integration."""
+"""
+Provides the following Device Actions:
+   Virtual Buttons
+   All Standby
+"""
 from __future__ import annotations
 
 import homeassistant.helpers.config_validation as cv
@@ -7,7 +11,7 @@ from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import entity_registry
 
-from custom_components.mlgw.const import ATTR_MLGW_BUTTON
+from .const import ATTR_MLGW_BUTTON
 
 from . import DOMAIN, SERVICE_VIRTUAL_BUTTON, SERVICE_ALL_STANDBY
 

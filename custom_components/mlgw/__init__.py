@@ -10,7 +10,7 @@ import json
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
@@ -179,7 +179,14 @@ async def async_setup(hass: HomeAssistant, config: dict):
         return False
 
     gateway = await create_mlgw_gateway(
-        hass, host, port, user, password, use_mllog, default_source, available_sources
+        hass,
+        host,
+        user,
+        password,
+        mlgw_configurationdata,
+        use_mllog,
+        default_source,
+        available_sources,
     )
     if not gateway:
         return False
@@ -267,7 +274,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         return False
 
     gateway = await create_mlgw_gateway(
-        hass, host, mlgw_configurationdata["port"], username, password, use_mllog
+        hass, host, username, password, mlgw_configurationdata, use_mllog
     )
     if not gateway:
         return False

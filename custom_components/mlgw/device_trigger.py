@@ -30,7 +30,8 @@ CONF_PAYLOAD_TYPE = "payload_type"
 CONF_PAYLOAD_TYPES = [PAYLOAD_LIGHT_CONTROL_EVENT]
 # CONF_PAYLOAD_TYPES = [PAYLOAD_ALL_STANDBY, PAYLOAD_LIGHT_CONTROL_EVENT]
 TRIGGER_TYPES = ["LIGHT", "CONTROL"]
-LIGHT_COMMAND = "subtype"
+LIGHT_COMMAND = "command"
+CONF_SUBTYPE = "subtype"
 ROOM_ID = "room"
 # LIGHT_COMMANDS lists all possible secondary kets according to documentation
 # However, only a subset are sent by BEO4. In order to reduce clutter in the selector,
@@ -121,7 +122,7 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
         # vol.Required(CONF_ENTITY_ID): cv.entity_id,
         vol.Required(CONF_PAYLOAD_TYPE): vol.In(CONF_PAYLOAD_TYPES),
         vol.Optional(CONF_TYPE): vol.In(TRIGGER_TYPES),
-        vol.Optional(LIGHT_COMMAND): vol.In(LIGHT_COMMANDS),
+        vol.Optional(CONF_SUBTYPE): vol.In(LIGHT_COMMANDS),
         vol.Optional(ROOM_ID): str,
     }
 )
@@ -150,7 +151,7 @@ async def async_get_triggers(
                         **base_trigger,
                         CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
                         CONF_TYPE: triggertype,
-                        LIGHT_COMMAND: light_command,
+                        CONF_SUBTYPE: light_command,
                     }
                 )
 
@@ -168,7 +169,7 @@ async def async_attach_trigger(
     event_data = {
         CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
         CONF_TYPE: config[CONF_TYPE],
-        LIGHT_COMMAND: config[LIGHT_COMMAND],
+        LIGHT_COMMAND: config[CONF_SUBTYPE],
         CONF_ROOM: config[ROOM_ID],
     }
     event_config = {
