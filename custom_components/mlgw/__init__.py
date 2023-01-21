@@ -94,8 +94,10 @@ _LOGGER = logging.getLogger(__name__)
 # For your initial PR, limit it to 1 platform.
 PLATFORMS = ["media_player"]
 
+
 def yaml_to_json_config(manual_devices, availabe_sources):
     result = dict()
+    result["zones"] = list()
     i = 1
     for device in manual_devices:
         if CONF_MLGW_DEVICE_MLN in device.keys():
@@ -109,12 +111,19 @@ def yaml_to_json_config(manual_devices, availabe_sources):
         ml = None
         if CONF_MLGW_DEVICE_MLID in device.keys():
             ml = device[CONF_MLGW_DEVICE_MLID]
+        _z = None
+        r = 0
+        _zl = [w for w in result["zones"] if w["number"] == room]
+        if len(_zl) == 0:
+            _z = dict()
+            _z["number"] = room
+            result["zones"].append(_z)
+            r = result["zones"].index(_z)
+        else:
+            r = result["zones"].index(_zl[0])
 
-        if result["zones"][room] is None:
-            result["zones"][room] = list()
-        
-        if result["zones"][room]["products"] is None:
-            result["zones"][room]["products"] = list()
+        if "products" not in result["zones"][r]:
+            result["zones"][r]["products"] = list()
 
         product = dict()
         product["MLN"] = mln
@@ -136,7 +145,8 @@ def yaml_to_json_config(manual_devices, availabe_sources):
             device_sources.append(_source)
 
         product["sources"] = device_sources
-        result["zones"][room]["products"].append(product)
+        result["zones"][r]["products"].append(product)
+    return result
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -160,8 +170,10 @@ async def async_setup(hass: HomeAssistant, config: dict):
     else:
         use_mllog = False
 
-    mlgw_configurationdata = yaml_to_json_config(hass.data[DOMAIN][MLGW_DEVICES])
-    mlgw_configurationdata["port"] = port 
+    mlgw_configurationdata = yaml_to_json_config(
+        hass.data[DOMAIN][MLGW_DEVICES], available_sources
+    )
+    mlgw_configurationdata["port"] = port
 
     if mlgw_configurationdata is None:
         return False
@@ -171,6 +183,8 @@ async def async_setup(hass: HomeAssistant, config: dict):
     )
     if not gateway:
         return False
+
+    # Only one gateway configuration supported here
     hass.data[DOMAIN][MLGW_GATEWAY] = gateway
     hass.data[DOMAIN][MLGW_GATEWAY_CONFIGURATION_DATA] = mlgw_configurationdata
 
@@ -178,7 +192,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
         discovery.async_load_platform(hass, "media_player", DOMAIN, {}, mlgw_config)
     )
 
-    register_services()
+    register_services(hass, gateway)
 
     return True
 
@@ -205,8 +219,8 @@ def get_mlgw_configuration_data(host: str, username: str, password: str):
 
     return response.json()
 
-def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
 
+def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
     def virtual_button_press(service: ServiceDataType):
         if not gateway:
             return False
@@ -235,6 +249,7 @@ def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
         send_all_standby,
         schema=vol.Schema({}),
     )
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up MasterLink Gateway from a config entry."""
@@ -282,7 +297,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
 
-    register_services()
+    register_services(hass, gateway)
 
     return True
 

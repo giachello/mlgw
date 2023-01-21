@@ -4,16 +4,23 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.components.automation import (
-    AutomationActionType,
-    AutomationTriggerInfo,
+from homeassistant.helpers.trigger import (
+    TriggerActionType,
+    TriggerInfo,
 )
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.homeassistant.triggers import event as event_trigger
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from homeassistant.const import (
+    CONF_DEVICE_ID,
+    CONF_DOMAIN,
+    CONF_PLATFORM,
+    CONF_TYPE,
+    CONF_ROOM,
+)
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, MLGW_EVENT_MLGW_TELEGRAM
 
@@ -24,6 +31,7 @@ CONF_PAYLOAD_TYPES = [PAYLOAD_LIGHT_CONTROL_EVENT]
 # CONF_PAYLOAD_TYPES = [PAYLOAD_ALL_STANDBY, PAYLOAD_LIGHT_CONTROL_EVENT]
 TRIGGER_TYPES = ["LIGHT", "CONTROL"]
 LIGHT_COMMAND = "subtype"
+ROOM_ID = "room"
 # LIGHT_COMMANDS lists all possible secondary kets according to documentation
 # However, only a subset are sent by BEO4. In order to reduce clutter in the selector,
 # only this subset is enabled
@@ -114,6 +122,7 @@ TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
         vol.Required(CONF_PAYLOAD_TYPE): vol.In(CONF_PAYLOAD_TYPES),
         vol.Optional(CONF_TYPE): vol.In(TRIGGER_TYPES),
         vol.Optional(LIGHT_COMMAND): vol.In(LIGHT_COMMANDS),
+        vol.Optional(ROOM_ID): str,
     }
 )
 
@@ -131,6 +140,7 @@ async def async_get_triggers(
             CONF_PLATFORM: "device",
             CONF_DEVICE_ID: device_id,
             CONF_DOMAIN: DOMAIN,
+            ROOM_ID: "",
         }
 
         for triggertype in TRIGGER_TYPES:
@@ -150,8 +160,8 @@ async def async_get_triggers(
 async def async_attach_trigger(
     hass: HomeAssistant,
     config: ConfigType,
-    action: AutomationActionType,
-    automation_info: AutomationTriggerInfo,
+    action: TriggerActionType,
+    automation_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
 
@@ -159,6 +169,7 @@ async def async_attach_trigger(
         CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
         CONF_TYPE: config[CONF_TYPE],
         LIGHT_COMMAND: config[LIGHT_COMMAND],
+        CONF_ROOM: config[ROOM_ID],
     }
     event_config = {
         event_trigger.CONF_PLATFORM: "event",
@@ -170,3 +181,17 @@ async def async_attach_trigger(
     return await event_trigger.async_attach_trigger(
         hass, event_config, action, automation_info, platform_type="device"
     )
+
+
+async def async_get_trigger_capabilities(
+    hass: HomeAssistant, config: ConfigType
+) -> dict[str, vol.Schema]:
+    """List trigger capabilities."""
+
+    return {
+        "extra_fields": vol.Schema(
+            {
+                vol.Optional(ROOM_ID): str,
+            }
+        )
+    }
