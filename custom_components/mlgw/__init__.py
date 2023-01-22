@@ -10,7 +10,7 @@ import json
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryNotReady
 from homeassistant.const import (
     CONF_HOST,
     CONF_PASSWORD,
@@ -260,15 +260,23 @@ def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up MasterLink Gateway from a config entry."""
+    from requests.exceptions import RequestException
 
     host = entry.data.get(CONF_HOST)
     password = entry.data.get(CONF_PASSWORD)
     username = entry.data.get(CONF_USERNAME)
     use_mllog = entry.data.get(CONF_MLGW_USE_MLLOG)
 
-    mlgw_configurationdata = await hass.async_add_executor_job(
+    try:
+        mlgw_configurationdata = await hass.async_add_executor_job(
         get_mlgw_configuration_data, host, username, password
     )
+    except (RequestException) as ex:
+        # this will cause Home Assistant to retry setting up the integration later.
+        raise ConfigEntryNotReady(
+            f"Cannot connect to {host}, is it on?"
+        ) from ex
+
 
     if mlgw_configurationdata is None:
         return False
