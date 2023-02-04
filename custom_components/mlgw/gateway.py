@@ -35,6 +35,7 @@ class MasterLinkGateway:
         default_source,
         available_sources,
         hass,
+        config_entry_id=None,
     ):
         """Initialize the MLGW gateway."""
         # for both connections
@@ -50,12 +51,17 @@ class MasterLinkGateway:
         self.buffersize = 1024
         self._connectedMLGW = False
         self.stopped = threading.Event()
+        self.brokensocket = threading.Event()
+        self.stopped.clear()
+        self.brokensocket.clear()
+
         # to manage the sources and devices
         self._default_source = default_source
         self._beolink_source = default_source
         self._available_sources = available_sources
         self._devices = None
         self._hass: HomeAssistant = hass
+        self._config_entry_id = config_entry_id
         self._serial = None
         self._mlgw_configurationdata = mlgw_configurationdata
 
@@ -84,11 +90,20 @@ class MasterLinkGateway:
         self._devices = devices
 
     async def terminate_async(self):
+        """Terminate the gateway connections. Sets a flag that the listen threads look
+        at to determine when to quit"""
         self.stopped.set()
 
-    async def ml_connect(self):
+    async def async_ml_connect(self):
+        """Async version of the mlgw connect function"""
+        loop = asyncio.get_event_loop()
+        # start mlgw_connect(self) in a separate thread, suspend
+        # the current coroutine, and resume when it's done
+        await loop.run_in_executor(None, self.ml_connect, self)
+
+    def ml_connect(self):
         """Connect the undocumented MasterLink stream."""
-        _LOGGER.info("Trying to connect to ML CLI: %s", self._host)
+        _LOGGER.info("Attempt to connect to ML CLI: %s", self._host)
         self._connectedML = False
 
         try:
@@ -99,9 +114,9 @@ class MasterLinkGateway:
                 _LOGGER.debug("Unexpected login prompt: %s", line)
                 raise ConnectionError
             # put some small pauses to see if we can avoid occasional login problems
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
             self._tn.write(self._password.encode("ascii") + b"\n")
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
 
             # Try to read until we hit the command prompt.
             # BLGW has a "BLGW >" prompt. MLGW has a "MLGW >" prompt
@@ -114,7 +129,7 @@ class MasterLinkGateway:
                 attempts = attempts + 1
                 if line[-5:] == b"LGW >":
                     break
-                await asyncio.time.sleep(0.5)
+                time.sleep(0.5)
 
             if line[-5:] != b"LGW >":
                 _LOGGER.debug("Unexpected CLI prompt: %s", line)
@@ -122,8 +137,6 @@ class MasterLinkGateway:
 
             # Enter the undocumented Masterlink Logging function
             self._tn.write(b"_MLLOG ONLINE\r\n")
-            #            self._hass.async_create_task(self._ml_thread())
-            threading.Thread(target=self._ml_thread).start()
 
             self._connectedML = True
             _LOGGER.info("Connected to ML CLI: %s", self._host)
@@ -131,39 +144,70 @@ class MasterLinkGateway:
             return True
 
         except EOFError as exc:
-            _LOGGER.error("Error opening ML CLI connection to: %s", exc)
-            return False
+            _LOGGER.warning("Error opening ML CLI connection to: %s", exc)
+            raise
 
-        except ConnectionError:
-            _LOGGER.error("Failed to connect, continuing without ML CLI")
-            return False
+        except ConnectionError as exc:
+            _LOGGER.warning("Failed to connect to ML CLI: %s", exc)
+            raise
 
     def ml_close(self):
         """Close the connection to the MasterLink stream."""
         if self._connectedML:
             self._connectedML = False
-            #            self.stopped.set()
             try:
-                print(self._tn.eof)
-                print(self._tn)
                 self._tn.close()
-            except Exception:
+                self._tn = None
+            except OSError:
                 _LOGGER.error("Error closing ML CLI")
             _LOGGER.warning("Closed connection to ML CLI")
 
     # This is the thread function to manage the ML CLI connection
-    # async def _ml_thread(self):
-    def _ml_thread(self):
+    def ml_thread(self):
+        """The thread that manages the connection with the MLGW API"""
+        connect_retries = 0
+        max_connect_retries = 10
+        retry_delay = 60
+        while connect_retries < max_connect_retries and not self.stopped.isSet():
+            try:
+                # if not connected, then connect
+                if not self._connectedML:
+                    self.ml_connect()
+            except (ConnectionError, OSError):
+                # wait for 1 minute, max 10 times
+                time.sleep(retry_delay)
+                connect_retries = connect_retries + 1
+                continue
+            try:
+                connect_retries = 0 # if connect was successful, reset the attempts
+                self.ml_listen()
+                self.ml_close()
+            except (ConnectionResetError, OSError, EOFError):
+                self.ml_close()
+                # wait for 1 minute, max 10 times
+                time.sleep(retry_delay)
+                connect_retries = connect_retries + 1
+                continue
+            except KeyboardInterrupt:
+                break
+        _LOGGER.info("Shutting down ML CLI thread")
+
+    def ml_listen(self):
         """Receive notification about incoming event from the ML connection."""
+        _recvtimeout = 5  # timeout recv every 5 sec
+        _lastping = 0  # how many seconds ago was the last ping.
 
         input_bytes = ""
         while not self.stopped.isSet():
             try:  # nonblocking read from the connection
-                input_bytes = input_bytes + self._tn.read_very_eager().decode("ascii")
+                input_bytes = input_bytes + self._tn.read_until(
+                    b"\n", _recvtimeout
+                ).decode("ascii")
+
             except EOFError:
-                _LOGGER.error("ML CLI Thread: EOF Error ")
+                _LOGGER.error("ML CLI Thread: EOF Error")
                 self.ml_close()
-                return
+                raise
 
             if input_bytes.find("\n") > 0:  # if there is a full line
 
@@ -208,47 +252,55 @@ class MasterLinkGateway:
                 except ValueError:
                     continue
                 except IndexError:
-                    _LOGGER.debug("ML CLI Thread: error parsing telegram: %s", line)
+                    _LOGGER.warning("ML CLI Thread: error parsing telegram: %s", line)
                     continue
             else:  # else sleep a bit and then continue reading
-                time.sleep(0.5)
-
-        self.ml_close()
+                #                time.sleep(0.5)
+                _lastping = _lastping + _recvtimeout
+                # Ping the gateway to test the connection every 10 minutes
+                if _lastping >= 600:
+                    _LOGGER.debug("Sent NUL ping to ML")
+                    self._tn.write(bytes([0]))
+                    _lastping = 0
+                continue
 
     @callback
-    def _notify_incoming_ML_telegram(self, telegram):
+    def _notify_incoming_ML_telegram(self, telegram):  # pylint: disable=invalid-name
         """Notify hass when an incoming ML message is received."""
         self._hass.bus.async_fire(MLGW_EVENT_ML_TELEGRAM, telegram)
 
     @callback
-    def _notify_incoming_MLGW_telegram(self, telegram):
+    def _notify_incoming_MLGW_telegram(self, telegram):  # pylint: disable=invalid-name
         """Notify hass when an incoming ML message is received."""
         self._hass.bus.async_fire(MLGW_EVENT_MLGW_TELEGRAM, telegram)
 
+    async def async_mlgw_connect(self):
+        """Async version of the mlgw connect function"""
+        loop = asyncio.get_event_loop()
+        # start mlgw_connect(self) in a separate thread, suspend
+        # the current coroutine, and resume when it's done
+        await loop.run_in_executor(None, self.mlgw_connect, self)
+
     def mlgw_connect(self):
         """Open tcp connection to the mlgw API."""
-        _LOGGER.info("Trying to connect to MLGW")
+        _LOGGER.info("Trying to connect to MLGW API")
         self._connectedMLGW = False
 
         # open socket to masterlink gateway
-        self._socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._recvtimeout = 5  # timeout recv every 5 seconds
-        self._lastping = 0  # last ping will say how many seconds ago was the last ping.
-        self._socket.settimeout(self._recvtimeout)
         try:
+            self._socket: socket.socket = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM
+            )
+            self.brokensocket.clear()
             self._socket.connect((self._host, self._port))
-        except Exception as e:
+        except OSError as ex:
             self._socket = None
-            _LOGGER.error("Error opening MLGW connection to %s: %s", self._host, e)
-            return
-
-        #        self._hass.async_create_task(self._mlgw_listen_thread())
-        threading.Thread(target=self._mlgw_listen_thread).start()
+            _LOGGER.error("Error connecting to MLGW API %s: %s", self._host, ex)
+            raise
 
         self._connectedMLGW = True
-        self.mlgw_ping()  # force a ping so that the MLGW will request authentication
         _LOGGER.info(
-            "Opened connection to ML Gateway to %s port: %s",
+            "MLGW API connection successful to %s port: %s",
             self._host,
             str(self._port),
         )
@@ -257,18 +309,19 @@ class MasterLinkGateway:
         """Close connection to mlgw"""
         if self._connectedMLGW:
             self._connectedMLGW = False
-            self.stopped.set()
-            try:
-                self._socket.shutdown(socket.SHUT_RDWR)
-                self._socket.close()
-            except Exception:
-                _LOGGER.warning("Error closing connection to ML Gateway")
-                return
-            _LOGGER.info("Closed connection to ML Gateway")
+            if self._socket is not None:
+                try:
+                    self._socket.shutdown(socket.SHUT_RDWR)
+                    self._socket.close()
+                    self._socket = None
+                except OSError:
+                    _LOGGER.warning("Error closing connection to MLGW API")
+                    return
+                _LOGGER.warning("Closed connection to MLGW API")
 
     def mlgw_login(self):
         """Login to the gateway using username and password."""
-        _LOGGER.debug("mlgw: Trying to login")
+        _LOGGER.debug("MLGW: Trying to login")
         if self._connectedMLGW:
             wrkstr = self._user + chr(0x00) + self._password
             payload = bytearray()
@@ -290,7 +343,12 @@ class MasterLinkGateway:
             _telegram.append(0x00)  # byte[3] Spare
             for p in payload:
                 _telegram.append(p)
-            self._socket.sendall(_telegram)
+            try:
+                self._socket.sendall(_telegram)
+            except (OSError, BrokenPipeError):
+                self.brokensocket.set()
+                _LOGGER.warning("MLGW: socket broken pipe")
+                return
 
             _LOGGER.debug(
                 "MLGW: >send %s: %s",
@@ -353,24 +411,62 @@ class MasterLinkGateway:
             _LOGGER.info("MLGW: Serial number is %s", self._serial)  # info
         return
 
-    def _mlgw_listen_thread(self):
-        """This is the thread function to manage the MLGW connection"""
-        while not self.stopped.isSet():
+    def mlgw_thread(self):
+        """The thread that manages the connection with the MLGW API"""
+        connect_retries = 0
+        max_connect_retries = 10
+        retry_delay = 60
+        while connect_retries < max_connect_retries and not self.stopped.isSet():
+            try:
+                # if not connected, then connect
+                if not self._connectedMLGW:
+                    self.mlgw_connect()
+                self.mlgw_ping()  # force a ping so that the MLGW will request authentication
+            except OSError:
+                # wait for 1 minute, max 10 times
+                time.sleep(retry_delay)
+                connect_retries = connect_retries + 1
+                continue
+            try:
+                connect_retries = 0 # if connect was successful, reset the attempts
+                self._mlgw_listen()
+                self.mlgw_close()
+            except (ConnectionResetError, OSError):
+                self.mlgw_close()
+                # wait for 1 minute, max 10 times
+                time.sleep(retry_delay)
+                connect_retries = connect_retries + 1
+                continue
+            except KeyboardInterrupt:
+                break
+
+        # after 10 attempts, or if HA asked to stop it, stop the thread
+        self.mlgw_close()
+        _LOGGER.info("Shutting down MLGW API thread")
+
+    def _mlgw_listen(self):
+        """Listen and manage the MLGW connection"""
+        _recvtimeout = 5  # timeout recv every 5 sec
+        _lastping = 0  # how many seconds ago was the last ping.
+        self._socket.settimeout(_recvtimeout)
+
+        while not (self.stopped.isSet() or self.brokensocket.isSet()):
             response = None
             try:
                 response = self._socket.recv(self.buffersize)
             except KeyboardInterrupt:
                 _LOGGER.warning("MLGW: keyboard interrupt in listen thread")
-                self.mlgw_close()
+                raise
             except socket.timeout:
-                self._lastping = self._lastping + self._recvtimeout
+                _lastping = _lastping + _recvtimeout
                 # Ping the gateway to test the connection every 10 minutes
-                if self._lastping >= 600:
+                if _lastping >= 600:
                     self.mlgw_ping()
-                    self._lastping = 0
+                    _lastping = 0
                 continue
-            except ConnectionResetError:
+            except (ConnectionResetError, OSError):
                 _LOGGER.warning("MLGW: socket connection reset")
+                raise
 
             if response is not None and response != b"":
                 # Decode response. Response[0] is SOH, or 0x01
@@ -380,37 +476,7 @@ class MasterLinkGateway:
 
                 _LOGGER.debug("MLGW: Msg type: %s: %s", msg_type, msg_payload)
 
-                if msg_byte == 0x20:  # Virtual Button event
-                    virtual_btn = response[4]
-                    if len(response) < 5:
-                        virtual_action = _getvirtualactionstr(0x01)
-                    else:
-                        virtual_action = _getvirtualactionstr(response[5])
-                    _LOGGER.info(
-                        "MLGW: Virtual button: %s %s", virtual_btn, virtual_action
-                    )
-                    decoded = dict()
-                    decoded["payload_type"] = "virtual_button"
-                    decoded["button"] = virtual_btn
-                    decoded["action"] = virtual_action
-                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
-
-                elif msg_byte == 0x31:  # Login Status
-                    if msg_payload == "FAIL":
-                        _LOGGER.info(
-                            "MLGW: MLGW protocol Password required to %s", self._host
-                        )
-                        self.mlgw_login()
-                    elif msg_payload == "OK":
-                        _LOGGER.info(
-                            "MLGW: MLGW protocol Login successful to %s", self._host
-                        )
-                        self.mlgw_get_serial()
-
-                #                elif msg_byte == 0x37:  # Pong (Ping response)
-                #                    _LOGGER.debug("mlgw: pong")
-
-                elif msg_byte == 0x02:  # Source status
+                if msg_byte == 0x02:  # Source status
                     sourceMLN = response[4]
                     beolink_source = _getselectedsourcestr(response[5]).upper()
                     sourceMediumPosition = _hexword(response[6], response[7])
@@ -482,15 +548,6 @@ class MasterLinkGateway:
                             if x._mln == sourceMLN:
                                 x.set_state(STATE_PLAYING)
 
-                elif msg_byte == 0x05:  # All Standby
-                    if self._devices is not None:
-                        # set all connected devices state to off
-                        for i in self._devices:
-                            i.set_state(STATE_OFF)
-                    decoded = dict()
-                    decoded["payload_type"] = "all_standby"
-                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
-
                 elif msg_byte == 0x04:  # Light / Control command
                     lcroomnumber = response[4]
                     lcroom = _getroomstr(lcroomnumber)
@@ -509,7 +566,51 @@ class MasterLinkGateway:
                     decoded["command"] = lccommand
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
-        self.mlgw_close()
+                elif msg_byte == 0x05:  # All Standby
+                    if self._devices is not None:
+                        # set all connected devices state to off
+                        for i in self._devices:
+                            i.set_state(STATE_OFF)
+                    decoded = dict()
+                    decoded["payload_type"] = "all_standby"
+                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
+
+                elif msg_byte == 0x20:  # Virtual Button event
+                    virtual_btn = response[4]
+                    if len(response) < 5:
+                        virtual_action = _getvirtualactionstr(0x01)
+                    else:
+                        virtual_action = _getvirtualactionstr(response[5])
+                    _LOGGER.info(
+                        "MLGW: Virtual button: %s %s", virtual_btn, virtual_action
+                    )
+                    decoded = dict()
+                    decoded["payload_type"] = "virtual_button"
+                    decoded["button"] = virtual_btn
+                    decoded["action"] = virtual_action
+                    self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
+
+                elif msg_byte == 0x31:  # Login Status
+                    if msg_payload == "FAIL":
+                        _LOGGER.info(
+                            "MLGW: MLGW protocol Password required to %s", self._host
+                        )
+                        self.mlgw_login()
+                    elif msg_payload == "OK":
+                        _LOGGER.info(
+                            "MLGW: MLGW protocol Login successful to %s", self._host
+                        )
+                        self.mlgw_get_serial()
+
+                # elif msg_byte == 0x37:  # Pong (Ping response)
+                #     _LOGGER.debug("mlgw: pong")
+
+                elif msg_byte == 0x38:  # Configuration changed notification
+                    _LOGGER.debug("mlgw: configuration changed, reloading component")
+                    service_data = {"entry_id": self._config_entry_id}
+                    self._hass.services.call(
+                        "homeassistant", "reload_config_entry", service_data, False
+                    )
 
     def mlgw_receive(self):
         """Receive message from MLGW.
@@ -547,10 +648,18 @@ async def create_mlgw_gateway(
     password,
     mlgw_configurationdata,
     use_mllog,
+    config_entry_id=None,
     default_source=None,
     available_sources=None,
 ):
-    """Create the mlgw gateway."""
+    """Create the mlgw gateway.
+    Hass: Home Assistant instance
+    Host / User / Password: is the login information
+    mlgw_configurationdata: the configuration information taken from the mlgw_pservices.json API
+    use_mllog: True: use the undocumented ML functionality
+    config_entry_id: the configuration entry ID of this gateway so it can be reloaded if a config change notification is received from the MLGW.
+    default_soruce, available_sources: the static list of sources from configuration yaml
+    """
     gateway = MasterLinkGateway(
         host,
         mlgw_configurationdata["port"],
@@ -560,12 +669,14 @@ async def create_mlgw_gateway(
         default_source,
         available_sources,
         hass,
+        config_entry_id,
     )
 
-    if use_mllog is True:
-        await gateway.ml_connect()
+    # Start the threads to connect the two endpoints
+    threading.Thread(target=gateway.mlgw_thread).start()
 
-    gateway.mlgw_connect()
+    if use_mllog is True:
+        threading.Thread(target=gateway.ml_thread).start()
 
     def _stop_listener(_event):
         gateway.stopped.set()
@@ -628,7 +739,9 @@ def decode_device(d):
 # ##### Decode Masterlink Protocol packet to a serializable dict
 
 
-def decode_ml_to_dict(telegram):
+def decode_ml_to_dict(telegram) -> dict:
+    """Convert a binary ML packet into a dict representation of the message.
+    telegram: the binary package"""
     decoded = dict()
     decoded["from_device"] = decode_device(telegram[1])
     decoded["to_device"] = decode_device(telegram[0])
@@ -776,7 +889,7 @@ def decode_ml_to_dict(telegram):
 #
 def _getpayloadtypestr(payloadtype):
     result = mlgw_payloadtypedict.get(payloadtype)
-    if result == None:
+    if result is None:
         result = "UNKNOWN (type=" + _hexbyte(payloadtype) + ")"
     return str(result)
 
@@ -793,35 +906,35 @@ def _getmlnstr(mln):
 
 def _getbeo4commandstr(command):
     result = beo4_commanddict.get(command)
-    if result == None:
+    if result is None:
         result = "Cmd=" + _hexbyte(command)
     return result
 
 
 def _getvirtualactionstr(action):
     result = mlgw_virtualactiondict.get(action)
-    if result == None:
+    if result is None:
         result = "Action=" + _hexbyte(action)
     return result
 
 
 def _getselectedsourcestr(source):
     result = ml_selectedsourcedict.get(source)
-    if result == None:
+    if result is None:
         result = "Src=" + _hexbyte(source)
     return result
 
 
 def _getspeakermodestr(source):
     result = mlgw_speakermodedict.get(source)
-    if result == None:
+    if result is None:
         result = "mode=" + _hexbyte(source)
     return result
 
 
 def _getdictstr(mydict, mykey):
     result = mydict.get(mykey)
-    if result == None:
+    if result is None:
         result = _hexbyte(mykey)
     return result
 

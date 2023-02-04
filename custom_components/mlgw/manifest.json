@@ -1,7 +1,7 @@
 {
   "domain": "mlgw",
   "name": "MasterLink Gateway",
-  "version" : "2023.1.2",
+  "version" : "2023.2.1",
   "config_flow": true,
   "documentation": "https://github.com/giachello/mlgw",
   "issue_tracker": "https://github.com/giachello/mlgw/issues",

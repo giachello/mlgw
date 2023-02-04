@@ -96,6 +96,7 @@ PLATFORMS = ["media_player"]
 
 
 def yaml_to_json_config(manual_devices, availabe_sources):
+    """Convert the YAML configuration into the equivalent json config from the MLGW."""
     result = dict()
     result["zones"] = list()
     i = 1
@@ -185,8 +186,8 @@ async def async_setup(hass: HomeAssistant, config: dict):
         password,
         mlgw_configurationdata,
         use_mllog,
-        default_source,
-        available_sources,
+        default_source=default_source,
+        available_sources=available_sources,
     )
     if not gateway:
         return False
@@ -205,6 +206,7 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 
 def get_mlgw_configuration_data(host: str, username: str, password: str):
+    """Get the configuration data from the mlgw using the mlgwpservices.json endpoint."""
     import requests
     from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 
@@ -228,6 +230,8 @@ def get_mlgw_configuration_data(host: str, username: str, password: str):
 
 
 def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
+    """Register the Virtual Button and All Standby services."""
+
     def virtual_button_press(service: ServiceDataType):
         if not gateway:
             return False
@@ -269,20 +273,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     try:
         mlgw_configurationdata = await hass.async_add_executor_job(
-        get_mlgw_configuration_data, host, username, password
-    )
+            get_mlgw_configuration_data, host, username, password
+        )
     except (RequestException) as ex:
         # this will cause Home Assistant to retry setting up the integration later.
-        raise ConfigEntryNotReady(
-            f"Cannot connect to {host}, is it on?"
-        ) from ex
-
+        raise ConfigEntryNotReady(f"Cannot connect to {host}, is it on?") from ex
 
     if mlgw_configurationdata is None:
         return False
 
     gateway = await create_mlgw_gateway(
-        hass, host, username, password, mlgw_configurationdata, use_mllog
+        hass,
+        host,
+        username,
+        password,
+        mlgw_configurationdata,
+        use_mllog,
+        entry.entry_id,
     )
     if not gateway:
         return False

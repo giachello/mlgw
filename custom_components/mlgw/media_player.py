@@ -34,84 +34,50 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.core import Event, CALLBACK_TYPE
 import logging
-import voluptuous as vol
-from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import DeviceInfo
 import asyncio
 
 from homeassistant.const import (
     STATE_OFF,
-    STATE_ON,
     STATE_PLAYING,
     STATE_PAUSED,
-    CONF_DEVICES,
-    CONF_HOST,
-    CONF_PASSWORD,
-    CONF_PORT,
-    CONF_DEVICES,
-    CONF_USERNAME,
 )
 
-from homeassistant.components.media_player import MediaPlayerEntity
-
-from homeassistant.components.media_player.const import (
-    SUPPORT_STOP,
-    SUPPORT_TURN_ON,
-    SUPPORT_TURN_OFF,
-    SUPPORT_SELECT_SOURCE,
-    SUPPORT_VOLUME_STEP,
-    SUPPORT_VOLUME_MUTE,
-    SUPPORT_PREVIOUS_TRACK,
-    SUPPORT_NEXT_TRACK,
-    SUPPORT_PLAY,
-    SUPPORT_PLAY_MEDIA,
-    SUPPORT_PAUSE,
-    SUPPORT_SHUFFLE_SET,
-    SUPPORT_REPEAT_SET,
-    MEDIA_TYPE_MUSIC,
-    MEDIA_TYPE_VIDEO,
+from homeassistant.components.media_player import (
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaType,
 )
 
-SUPPORT_BEO = (
-    SUPPORT_TURN_ON
-    | SUPPORT_TURN_OFF
-    | SUPPORT_VOLUME_STEP
-    | SUPPORT_SELECT_SOURCE
-    | SUPPORT_VOLUME_MUTE
-    | SUPPORT_PREVIOUS_TRACK
-    | SUPPORT_NEXT_TRACK
-)
 
 from .const import (
     DOMAIN,
-    beo4_commanddict,
-    ml_destselectordict,
     reverse_ml_destselectordict,
     reverse_ml_selectedsourcedict,
     ml_selectedsourcedict,
     ml_selectedsource_type_dict,
     BEO4_CMDS,
     MLGW_GATEWAY,
-    MLGW_DEVICES,
     MLGW_GATEWAY_CONFIGURATION_DATA,
-    CONF_MLGW_DEFAULT_SOURCE,
-    CONF_MLGW_AVAILABLE_SOURCES,
-    MLGW_DEFAULT_SOURCE,
-    MLGW_AVAILABLE_SOURCES,
-    CONF_MLGW_DEVICE_NAME,
-    CONF_MLGW_DEVICE_MLN,
-    CONF_MLGW_DEVICE_ROOM,
-    CONF_MLGW_DEVICE_MLID,
-    CONF_MLGW_USE_MLLOG,
     MLGW_EVENT_ML_TELEGRAM,
     ML_ID_TIMEOUT,
 )
 
 from .gateway import MasterLinkGateway
 
+SUPPORT_BEO = (
+    MediaPlayerEntityFeature.TURN_ON
+    | MediaPlayerEntityFeature.TURN_OFF
+    | MediaPlayerEntityFeature.VOLUME_STEP
+    | MediaPlayerEntityFeature.SELECT_SOURCE
+    | MediaPlayerEntityFeature.VOLUME_MUTE
+    | MediaPlayerEntityFeature.PREVIOUS_TRACK
+    | MediaPlayerEntityFeature.NEXT_TRACK
+)
+
 _LOGGER = logging.getLogger(__name__)
 
-# Set up the Media_player devices. there are two ways, through the manual configuration in configuration.yaml 
+# Set up the Media_player devices. there are two ways, through the manual configuration in configuration.yaml
 # and through a config flow that automatically reads the devices list from the mlgw.
 
 # #########################################################################################
@@ -125,15 +91,20 @@ async def async_setup_entry(
 
     hass.data.setdefault(DOMAIN, {})
 
-    mlgw_configurationdata = hass.data[DOMAIN][config_entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA]
+    mlgw_configurationdata = hass.data[DOMAIN][config_entry.entry_id][
+        MLGW_GATEWAY_CONFIGURATION_DATA
+    ]
     gateway: MasterLinkGateway = hass.data[DOMAIN][config_entry.entry_id][MLGW_GATEWAY]
     serial = hass.data[DOMAIN][config_entry.entry_id]["serial"]
     _LOGGER.debug("Serial (async_setup_entry): %s", serial)
 
-    await async_create_devices(mlgw_configurationdata, gateway, async_add_entities, serial)
+    await async_create_devices(
+        mlgw_configurationdata, gateway, async_add_entities, serial
+    )
+
 
 # #########################################################################################
-# 
+#
 async def async_setup_platform(hass, config, add_devices, discovery_info=None):
     """Add MLGW devices through manual configuration"""
     hass.data.setdefault(DOMAIN, {})
@@ -146,7 +117,9 @@ async def async_setup_platform(hass, config, add_devices, discovery_info=None):
 
 # #########################################################################################
 #
-async def async_create_devices(mlgw_configurationdata, gateway, async_add_entities, serial=""):
+async def async_create_devices(
+    mlgw_configurationdata, gateway, async_add_entities, serial=""
+):
     """Read the configuration data from the gateway, and create the devices"""
     mp_devices = list()
 
@@ -164,11 +137,9 @@ async def async_create_devices(mlgw_configurationdata, gateway, async_add_entiti
             and _event.data["payload"]["command"] == "Light Timeout"
         ):
             _LOGGER.info(
-                "ML LOG returned ML id %s for MLN %s"
-                % (
-                    _event.data["to_device"],
-                    str(gateway._devices[device_sequence[ml_listener_iteration]]._mln),
-                )
+                "ML LOG returned ML id %s for MLN %s",
+                _event.data["to_device"],
+                str(gateway._devices[device_sequence[ml_listener_iteration]]._mln),
             )
             gateway._devices[device_sequence[ml_listener_iteration]].set_ml(
                 _event.data["to_device"]
@@ -221,21 +192,24 @@ async def async_create_devices(mlgw_configurationdata, gateway, async_add_entiti
         # wait for 10 seconds or until all the devices have reported back their ML address
         if gateway._connectedML:
             waiting_for = 0.0
-            while ml_listener_iteration < ml_devices_scanned and waiting_for < ML_ID_TIMEOUT:
+            while (
+                ml_listener_iteration < ml_devices_scanned
+                and waiting_for < ML_ID_TIMEOUT
+            ):
                 await asyncio.sleep(0.1)
                 waiting_for = waiting_for + 0.1
             stop_listening()  # clean up the listener for the device codes.
-            _LOGGER.info("got back the ml Ids")
+            _LOGGER.info("Got back the ML IDs")
 
     else:
         _LOGGER.error("MLGW Not connected while trying to add media_player devices")
 
 
 # #########################################################################################
-# convert statusID into selectID (e.g., Radio 0x6f ==> 0x81)
 
 
 def statusID_to_selectID(statusId):
+    """Convert statusID into selectID (e.g., Radio 0x6f ==> 0x81)"""
     return BEO4_CMDS.get(ml_selectedsourcedict.get(statusId).upper())
 
 
@@ -252,12 +226,14 @@ def statusID_to_selectID(statusId):
 
 
 class BeoSpeaker(MediaPlayerEntity):
+    """BeoSpeaker is a Media Player that represents one MasterLink device (e.g., a speaker or a receiver or TV)."""
+
     def __init__(
         self,
         mln,
         name,
-        roomNumber,
-        roomName,
+        room_number,
+        room_name,
         gateway: MasterLinkGateway,
         source_names: list,
         sources: list,
@@ -266,8 +242,8 @@ class BeoSpeaker(MediaPlayerEntity):
         self._mln = mln
         self._ml = None
         self._name = name
-        self._roomNumber = roomNumber
-        self._roomName = roomName
+        self._roomNumber = room_number
+        self._roomName = room_name
         self._gateway = gateway
         self._pwon = False
         self._playing = False
@@ -291,7 +267,7 @@ class BeoSpeaker(MediaPlayerEntity):
 
                     # I am telling the system I am turning off
                     if _event.data["payload_type"] == "RELEASE":
-                        _LOGGER.info("ML LOG said: RELEASE id %s" % (self._ml))
+                        _LOGGER.info("ML LOG said: RELEASE id %s", self._ml)
                         self._pwon = False
                         self._playing = False
                         self.clear_media_info()
@@ -299,8 +275,9 @@ class BeoSpeaker(MediaPlayerEntity):
                     # I am telling the system I want a source
                     elif _event.data["payload_type"] == "GOTO_SOURCE":
                         _LOGGER.info(
-                            "ML LOG said: GOTO_SOURCE %s on device %s"
-                            % (_event.data["payload"]["source"], self._ml)
+                            "ML LOG said: GOTO_SOURCE %s on device %s",
+                            _event.data["payload"]["source"],
+                            self._ml,
                         )
                         # reflect that the device is on and store the requested source
                         self._pwon = True
@@ -379,7 +356,7 @@ class BeoSpeaker(MediaPlayerEntity):
                             ]["statusID"]
                             if _statusID in ml_selectedsource_type_dict["AUDIO"]:
                                 self.clear_media_info()
-                                self._media_content_type = MEDIA_TYPE_MUSIC
+                                self._media_content_type = MediaType.MUSIC
                     elif _event.data["payload_type"] == "EXTENDED_SOURCE_INFORMATION":
                         if self.source is not None:
                             _statusID = self._sources[
@@ -455,7 +432,7 @@ class BeoSpeaker(MediaPlayerEntity):
         self._media_image_url = None
 
     def set_source_info(self, sourceID, channel_track=0):
-        # fill in channel number, name and icon for the UI, if the source ID matches the current source
+        """fill in channel number, name and icon for the UI, if the source ID matches the current source"""
         if self._source is None:
             return
         _statusID = self._sources[self._source_names.index(self._source)]["statusID"]
@@ -469,10 +446,10 @@ class BeoSpeaker(MediaPlayerEntity):
             # set the media type
             if _statusID in ml_selectedsource_type_dict["VIDEO"]:
                 self.clear_media_info()
-                self._media_content_type = MEDIA_TYPE_VIDEO
+                self._media_content_type = MediaType.VIDEO
             elif _statusID in ml_selectedsource_type_dict["AUDIO"]:
                 self.clear_media_info()
-                self._media_content_type = MEDIA_TYPE_MUSIC
+                self._media_content_type = MediaType.MUSIC
             else:
                 return
 
@@ -491,8 +468,10 @@ class BeoSpeaker(MediaPlayerEntity):
                 self._media_track = channel_track
                 self._media_title = f"Track {self._media_track}"
 
+            self.schedule_update_ha_state()
+
     def ch_number_to_name_and_icon(self, source, channel_track):
-        # look up the caption corresponding to the command number of the favorites list
+        """look up the caption corresponding to the command number of the favorites list"""
         try:
             source_info = self._sources[self._source_names.index(source)]
             if "channels" in source_info:  # check if the source has favorites
@@ -529,7 +508,7 @@ class BeoSpeaker(MediaPlayerEntity):
             name=self._name,
             manufacturer="Bang & Olufsen",
             via_device=(DOMAIN, self._serial),
-            suggested_area = self._roomName,
+            suggested_area=self._roomName,
         )
 
     @property
@@ -548,11 +527,11 @@ class BeoSpeaker(MediaPlayerEntity):
             ):
                 support = (
                     support
-                    | SUPPORT_PLAY
-                    | SUPPORT_PAUSE
-                    | SUPPORT_SHUFFLE_SET
-                    | SUPPORT_REPEAT_SET
-                    | SUPPORT_STOP
+                    | MediaPlayerEntityFeature.STOP
+                    | MediaPlayerEntityFeature.PLAY
+                    | MediaPlayerEntityFeature.PAUSE
+                    | MediaPlayerEntityFeature.SHUFFLE_SET
+                    | MediaPlayerEntityFeature.REPEAT_SET
                 )
         return support
 
@@ -631,17 +610,18 @@ class BeoSpeaker(MediaPlayerEntity):
             self.clear_media_info()
 
     def set_source(self, source):
-        # to be called by the gateway to set the source (the source is a statusID e.g., radio=0x6f)
+        """to be called by the gateway to set the source (the source is a statusID e.g., radio=0x6f)"""
         # find the source based on the source ID
         for _x in self._sources:
             if _x["statusID"] == source or _x["selectID"] == statusID_to_selectID(
                 source
             ):
                 self._source = _x["name"]
+                self.schedule_update_ha_state()
                 return
 
         _LOGGER.debug(
-            "BeoSpeaker: set_source %s unknown on device %s" % (source, self._name)
+            "BeoSpeaker: set_source %s unknown on device %s", source, self._name
         )
 
     def turn_on(self):
