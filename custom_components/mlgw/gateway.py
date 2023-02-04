@@ -32,6 +32,7 @@ class MasterLinkGateway:
         user,
         password,
         mlgw_configurationdata,
+        use_mllog,
         default_source,
         available_sources,
         hass,
@@ -43,6 +44,7 @@ class MasterLinkGateway:
         self._user = user
         self._password = password
         # for the ML (Telnet CLI) connection
+        self._use_mllog = use_mllog
         self._connectedML = False
         self._tn = None
         # for the MLGW (Port 9000) connection
@@ -67,8 +69,23 @@ class MasterLinkGateway:
 
     @property
     def connectedMLGW(self):
-        """True of the MLGW is connected."""
+        """True if the MLGW is connected."""
         return self._connectedMLGW
+
+    @property
+    def connectedML(self):
+        """True if the ML CLI is connected."""
+        return self._connectedML
+
+    @property
+    def devices(self):
+        """Return a list of BeoSpeaker devices."""
+        return self._devices
+
+    @property
+    def use_mllog(self):
+        """True if we are trying to use the ML CLI function."""
+        return self._use_mllog
 
     @property
     def beolink_source(self):
@@ -179,7 +196,7 @@ class MasterLinkGateway:
                 connect_retries = connect_retries + 1
                 continue
             try:
-                connect_retries = 0 # if connect was successful, reset the attempts
+                connect_retries = 0  # if connect was successful, reset the attempts
                 self.ml_listen()
                 self.ml_close()
             except (ConnectionResetError, OSError, EOFError):
@@ -428,7 +445,7 @@ class MasterLinkGateway:
                 connect_retries = connect_retries + 1
                 continue
             try:
-                connect_retries = 0 # if connect was successful, reset the attempts
+                connect_retries = 0  # if connect was successful, reset the attempts
                 self._mlgw_listen()
                 self.mlgw_close()
             except (ConnectionResetError, OSError):
@@ -666,6 +683,7 @@ async def create_mlgw_gateway(
         user,
         password,
         mlgw_configurationdata,
+        use_mllog,
         default_source,
         available_sources,
         hass,
@@ -682,6 +700,20 @@ async def create_mlgw_gateway(
         gateway.stopped.set()
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_listener)
+
+    async def wait_to_connect():
+        # Wait until gateway is connected on both MLGW and ML (if we are using it)
+        while (gateway.connectedMLGW is False) or (
+            gateway.connectedML is False and gateway.use_mllog is True
+        ):
+            await asyncio.sleep(1)
+
+    # wait to connect at most 20 seconds
+    try:
+        await asyncio.wait_for(wait_to_connect(), timeout=20)
+    except TimeoutError:
+        print("MLGW: timeout connecting with the MLGW!")
+        return None
 
     return gateway
 

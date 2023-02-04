@@ -139,9 +139,9 @@ async def async_create_devices(
             _LOGGER.info(
                 "ML LOG returned ML id %s for MLN %s",
                 _event.data["to_device"],
-                str(gateway._devices[device_sequence[ml_listener_iteration]]._mln),
+                str(gateway.devices[device_sequence[ml_listener_iteration]].mln),
             )
-            gateway._devices[device_sequence[ml_listener_iteration]].set_ml(
+            gateway.devices[device_sequence[ml_listener_iteration]].set_ml(
                 _event.data["to_device"]
             )
             ml_listener_iteration = ml_listener_iteration + 1
@@ -149,7 +149,7 @@ async def async_create_devices(
     if gateway.connectedMLGW:
 
         # listen to ML messages to track down the actual ML id of the device
-        if gateway._connectedML:
+        if gateway.use_mllog:
             stop_listening = gateway._hass.bus.async_listen(
                 MLGW_EVENT_ML_TELEGRAM, _message_listener
             )
@@ -175,10 +175,10 @@ async def async_create_devices(
                 # which is different from the MLN used by MLGW Prototcol. This allows us to reconnect the ML
                 # traffic to a device in Home Assistant. It does not work for NL devices so don't send it if
                 # there is a Serial Number attached to the device.
-                if gateway._connectedML and product.get("sn") is None:
+                if gateway.connectedML and product.get("sn") is None:
                     device_sequence.append(len(mp_devices) - 1)  # skip NL devices
                     gateway.mlgw_send_beo4_cmd(
-                        beospeaker._mln,
+                        beospeaker.mln,
                         reverse_ml_destselectordict.get("AUDIO SOURCE"),
                         BEO4_CMDS.get("LIGHT TIMEOUT"),
                     )
@@ -190,7 +190,7 @@ async def async_create_devices(
         )  # tell the gateway the list of devices connected to it.
 
         # wait for 10 seconds or until all the devices have reported back their ML address
-        if gateway._connectedML:
+        if gateway.connectedML:
             waiting_for = 0.0
             while (
                 ml_listener_iteration < ml_devices_scanned
@@ -412,7 +412,7 @@ class BeoSpeaker(MediaPlayerEntity):
                                 elif _event.data["payload"]["command"] == "Stop":
                                     self._playing = False
 
-        if self._gateway._connectedML:
+        if self._gateway._use_mllog:
             self._stop_listening = gateway._hass.bus.async_listen(
                 MLGW_EVENT_ML_TELEGRAM, _beospeaker_message_listener
             )
@@ -422,6 +422,7 @@ class BeoSpeaker(MediaPlayerEntity):
             self._stop_listening()
 
     def clear_media_info(self):
+        """Clear out the information about the current track/channel."""
         self._media_content_type = None
         self._media_track = None
         self._media_title = None
@@ -498,6 +499,14 @@ class BeoSpeaker(MediaPlayerEntity):
         return self._name
 
     @property
+    def ml(self):
+        return self._ml
+
+    @property
+    def mln(self):
+        return self._mln
+
+    @property
     def unique_id(self):
         return self._unique_id
 
@@ -513,6 +522,7 @@ class BeoSpeaker(MediaPlayerEntity):
 
     @property
     def friendly_name(self):
+        """Friendly Name of the device."""
         return self._name.capwords(sep="_")
 
     @property
