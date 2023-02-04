@@ -29,6 +29,12 @@ The plugin will automatically pick up the configuration from the the MLGW. The d
 
 ![Configuration MLGW](./mlgw_sources_config.png)
 
+
+If you set up Favorites in the MLGW configuration settings, the icons and the names of these radio stations will show up in Home Assistant.  
+
+![Configuration MLGW](./mlgw_favorites_config.png)
+
+
 ### Manual configuration through Configuration.yaml (deprecated, I'll likely remove this in the future)
 
 This is an alternative to the configuration above if you prefer manual configuration. Add to Configuration.yaml (replace with your specific setup):
