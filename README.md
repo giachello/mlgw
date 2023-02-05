@@ -65,9 +65,7 @@ The most powerful use of this integration is to listen to events on the B&O syst
 
 ### Lights and Virtual Buttons
 
-The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby". Light / Control and "All Standby" commands are also available as predefined [Triggers](https://www.home-assistant.io/docs/automation/trigger/). You will find the Triggers under the gateway device. 
-
-![Trigger example](./trigger_example.PNG)
+The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby". Light / Control and "All Standby" commands are also available as predefined [Triggers](https://www.home-assistant.io/docs/automation/trigger/). 
 
 The `mlgw` component forwards these events to Home Assistant and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
@@ -86,6 +84,12 @@ There are 5 events fired by the official integration:
 | mlgw.MLGW_telegram | light_control_event | room: room number, type: (CONTROL or LIGHT), command: the BEO4 key pressed after "LIGHT"                                                                                                                                                 |
 | mlgw.MLGW_telegram | source_status       | source_mln: device causing the event, source: the active Source (RADIO, CD, etc.), source_medium_position, source_position, source_activity: (Playing, Standby, etc.), picture_format are all information related to the specific source |
 | mlgw.MLGW_telegram | pict_sound_status   | source_mln: device causing the event, sound_status, speaker_mode, volume, screen1_mute, screen1_active, screen2_mute, screen2_active, cinema_mode, stereo_mode                                                                           |
+
+## Trigger Device Automations
+
+You can use a subset of LIGHT + \<key\> commands to generate automation triggers in a simple way for the MLGW gateway. Just create a new automation from the device screen for your MLGW. You will find the Triggers under the gateway device. "SanCarlos" below is the MLGW name, yours will be different.
+
+![Trigger example](./trigger_example.PNG)
 
 ### "Direct MasterLink"
 
@@ -139,9 +143,6 @@ You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual
 
 ![image](https://user-images.githubusercontent.com/60585229/111884347-6945d180-897e-11eb-98b9-891482898f48.png)
 
-## Device Automations
-
-You can use a subset of LIGHT + \<key\> commands to generate automation triggers in a simple way for the MLGW gateway. Just create a new automation from the device screen for your MLGW.
 
 ## Not implemented / TODO
 
