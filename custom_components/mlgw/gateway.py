@@ -120,7 +120,7 @@ class MasterLinkGateway:
 
     def ml_connect(self):
         """Connect the undocumented MasterLink stream."""
-        _LOGGER.info("Attempt to connect to ML CLI: %s", self._host)
+        _LOGGER.debug("Attempt to connect to ML CLI: %s", self._host)
         self._connectedML = False
 
         try:
@@ -156,7 +156,7 @@ class MasterLinkGateway:
             self._tn.write(b"_MLLOG ONLINE\r\n")
 
             self._connectedML = True
-            _LOGGER.info("Connected to ML CLI: %s", self._host)
+            _LOGGER.debug("Connected to ML CLI: %s", self._host)
 
             return True
 
@@ -177,7 +177,7 @@ class MasterLinkGateway:
                 self._tn = None
             except OSError:
                 _LOGGER.error("Error closing ML CLI")
-            _LOGGER.warning("Closed connection to ML CLI")
+            _LOGGER.debug("Closed connection to ML CLI")
 
     # This is the thread function to manage the ML CLI connection
     def ml_thread(self):
@@ -207,7 +207,7 @@ class MasterLinkGateway:
                 continue
             except KeyboardInterrupt:
                 break
-        _LOGGER.info("Shutting down ML CLI thread")
+        _LOGGER.warning("Shutting down ML CLI thread")
 
     def ml_listen(self):
         """Receive notification about incoming event from the ML connection."""
@@ -261,7 +261,7 @@ class MasterLinkGateway:
                     if encoded_telegram["payload_type"] == "GOTO_SOURCE":
                         self._beolink_source = encoded_telegram["payload"]["source"]
 
-                    _LOGGER.info("ML telegram: %s", encoded_telegram)
+                    _LOGGER.info("ML: %s", encoded_telegram)
 
                     self._hass.add_job(
                         self._notify_incoming_ML_telegram, encoded_telegram
@@ -269,7 +269,7 @@ class MasterLinkGateway:
                 except ValueError:
                     continue
                 except IndexError:
-                    _LOGGER.warning("ML CLI Thread: error parsing telegram: %s", line)
+                    _LOGGER.error("ML CLI Thread: error parsing telegram: %s", line)
                     continue
             else:  # else sleep a bit and then continue reading
                 #                time.sleep(0.5)
@@ -300,7 +300,7 @@ class MasterLinkGateway:
 
     def mlgw_connect(self):
         """Open tcp connection to the mlgw API."""
-        _LOGGER.info("Trying to connect to MLGW API")
+        _LOGGER.debug("Trying to connect to MLGW API")
         self._connectedMLGW = False
 
         # open socket to masterlink gateway
@@ -316,7 +316,7 @@ class MasterLinkGateway:
             raise
 
         self._connectedMLGW = True
-        _LOGGER.info(
+        _LOGGER.debug(
             "MLGW API connection successful to %s port: %s",
             self._host,
             str(self._port),
@@ -332,9 +332,9 @@ class MasterLinkGateway:
                     self._socket.close()
                     self._socket = None
                 except OSError:
-                    _LOGGER.warning("Error closing connection to MLGW API")
+                    _LOGGER.error("Error closing connection to MLGW API")
                     return
-                _LOGGER.warning("Closed connection to MLGW API")
+                _LOGGER.debug("Closed connection to MLGW API")
 
     def mlgw_login(self):
         """Login to the gateway using username and password."""
@@ -459,7 +459,7 @@ class MasterLinkGateway:
 
         # after 10 attempts, or if HA asked to stop it, stop the thread
         self.mlgw_close()
-        _LOGGER.info("Shutting down MLGW API thread")
+        _LOGGER.warning("Shutting down MLGW API thread")
 
     def _mlgw_listen(self):
         """Listen and manage the MLGW connection"""
@@ -598,7 +598,7 @@ class MasterLinkGateway:
                         virtual_action = _getvirtualactionstr(0x01)
                     else:
                         virtual_action = _getvirtualactionstr(response[5])
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "MLGW: Virtual button: %s %s", virtual_btn, virtual_action
                     )
                     decoded = dict()
@@ -609,12 +609,12 @@ class MasterLinkGateway:
 
                 elif msg_byte == 0x31:  # Login Status
                     if msg_payload == "FAIL":
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "MLGW: MLGW protocol Password required to %s", self._host
                         )
                         self.mlgw_login()
                     elif msg_payload == "OK":
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "MLGW: MLGW protocol Login successful to %s", self._host
                         )
                         self.mlgw_get_serial()
@@ -623,7 +623,7 @@ class MasterLinkGateway:
                 #     _LOGGER.debug("mlgw: pong")
 
                 elif msg_byte == 0x38:  # Configuration changed notification
-                    _LOGGER.debug("mlgw: configuration changed, reloading component")
+                    _LOGGER.info("MLGW: configuration changed, reloading component")
                     service_data = {"entry_id": self._config_entry_id}
                     self._hass.services.call(
                         "homeassistant", "reload_config_entry", service_data, False

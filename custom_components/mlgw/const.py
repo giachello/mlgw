@@ -73,12 +73,23 @@ ml_telegram_type_dict = dict(
 ml_command_type_dict = dict(
     [
         (0x04, "MASTER_PRESENT"),
+        # DISPLAY_SOURCE: Message sent with a payload showing the displayed source name.
+        # subtype 3 has the printable source name starting at byte 10 of the payload
+        (0x06, "DISPLAY_SOURCE"),
+        # START_VIDEO_DISTRIBUTION: Sent when a locally playing source starts being distributed on coaxial cable
+        (0x07, "START_VIDEO_DISTRIBUTION"),
         # REQUEST_DISTRIBUTED_SOURCE: seen when a device asks what source is being distributed
         # subtypes seen 01:request 04:no source 06:has source (byte 13 is source)
         (0x08, "REQUEST_DISTRIBUTED_SOURCE"),
+        # EXTENDED_SOURCE_INFORMATION: message with 6 subtypes showing information about the source.
+        # Printable info at byte 14 of the payload
+        # For Radio: 1: "" 2: Genre 3: Country 4: RDS info 5: Associated beo4 button 6: "Unknown"
+        # For A.Mem: 1: Genre 2: Album 3: Artist 4: Track name 5: Associated beo4 button 6: "Unknown"
+        (0x0B, "EXTENDED_SOURCE_INFORMATION"),
+        # BEO4_KEY fired when a key on the remote control is pressed
         (0x0D, "BEO4_KEY"),
-        (0x10, "STANDBY"),
-        (0x11, "RELEASE"),  # when a device turns off
+        (0x10, "STANDBY"),  # Fired when device requests to go in standby
+        (0x11, "RELEASE"),  # Fired by a device that turns off
         (0x20, "MLGW_REMOTE_BEO4"),
         # REQUEST_LOCAL_SOURCE: Seen when a device asks what source is playing locally to a device
         # subtypes seen 02:request 04:no source 05:secondary source 06:primary source (byte 11 is source)
@@ -87,9 +98,9 @@ ml_command_type_dict = dict(
         (0x3C, "TIMER"),
         (0x40, "CLOCK"),
         (0x44, "TRACK_INFO"),
+        (0x45, "GOTO_SOURCE"), # fired when a device requests a source
         # LOCK_MANAGER_COMMAND: Lock to Determine what device issues source commands
         # reference: https://tidsskrift.dk/daimipb/article/download/7043/6004/0
-        (0x45, "GOTO_SOURCE"),
         (0x5C, "LOCK_MANAGER_COMMAND"),
         (0x6C, "DISTRIBUTION_REQUEST"),
         (0x82, "TRACK_INFO_LONG"),
@@ -99,19 +110,6 @@ ml_command_type_dict = dict(
         # byte 22: 01: audio source 02: video source ff:undefined - byte 23: picture identifier
         (0x87, "STATUS_INFO"),
         (0x94, "VIDEO_TRACK_INFO"),
-        #
-        # -----------------------------------------------------------------------
-        # More packets that we see on the bus, with a guess of the type
-        # DISPLAY_SOURCE: Message sent with a payload showing the displayed source name.
-        # subtype 3 has the printable source name starting at byte 10 of the payload
-        (0x06, "DISPLAY_SOURCE"),
-        # START_VIDEO_DISTRIBUTION: Sent when a locally playing source starts being distributed on coaxial cable
-        (0x07, "START_VIDEO_DISTRIBUTION"),
-        # EXTENDED_SOURCE_INFORMATION: message with 6 subtypes showing information about the source.
-        # Printable info at byte 14 of the payload
-        # For Radio: 1: "" 2: Genre 3: Country 4: RDS info 5: Associated beo4 button 6: "Unknown"
-        # For A.Mem: 1: Genre 2: Album 3: Artist 4: Track name 5: Associated beo4 button 6: "Unknown"
-        (0x0B, "EXTENDED_SOURCE_INFORMATION"),
         (0x96, "PC_PRESENT"),
         # PICTURE AND SOUND STATUS
         # byte 0: bit 0-1: sound status - bit 2-3: stereo mode (can be 0 in a 5.1 setup)

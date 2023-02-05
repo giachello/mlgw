@@ -75,10 +75,10 @@ def host_valid(host):
 async def mlgw_get_xmpp_serial(_host: str) -> str:
 
     if _host in _Discovered_MLGW:
-        _LOGGER.info("XMPP found cached sn")
+        _LOGGER.debug("XMPP found cached sn")
         return _Discovered_MLGW[_host]
 
-    _LOGGER.info("XMPP connect to MLGW: Open")
+    _LOGGER.debug("XMPP connect to MLGW: Open")
     # open socket to masterlink gateway
     _socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     _socket.settimeout(TIMEOUT)
@@ -107,7 +107,7 @@ async def mlgw_get_xmpp_serial(_host: str) -> str:
         _LOGGER.error("Error receiving MLGW info from %s: %s" % (_host, e))
         _socket.close()
 
-    _LOGGER.info("XMPP got MLGW SN: %s" % (sn))
+    _LOGGER.debug("XMPP got MLGW SN: %s" % (sn))
 
     _Discovered_MLGW[_host] = sn
 
@@ -139,7 +139,7 @@ class CheckPasswordMLGWHub:
             )
 
         if response.status_code == 401:
-            _LOGGER.debug("Invalid authentication 401")
+            _LOGGER.warning("Invalid authentication to MLGW")
             raise InvalidAuth()
 
         if response.status_code != 200:

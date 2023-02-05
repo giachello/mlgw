@@ -267,15 +267,15 @@ class BeoSpeaker(MediaPlayerEntity):
 
                     # I am telling the system I am turning off
                     if _event.data["payload_type"] == "RELEASE":
-                        _LOGGER.info("ML LOG said: RELEASE id %s", self._ml)
+                        _LOGGER.debug("ML: RELEASE id %s", self._ml)
                         self._pwon = False
                         self._playing = False
                         self.clear_media_info()
 
                     # I am telling the system I want a source
                     elif _event.data["payload_type"] == "GOTO_SOURCE":
-                        _LOGGER.info(
-                            "ML LOG said: GOTO_SOURCE %s on device %s",
+                        _LOGGER.debug(
+                            "ML: GOTO_SOURCE %s on device %s",
                             _event.data["payload"]["source"],
                             self._ml,
                         )
