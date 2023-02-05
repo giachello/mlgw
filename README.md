@@ -143,6 +143,9 @@ You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual
 
 ![image](https://user-images.githubusercontent.com/60585229/111884347-6945d180-897e-11eb-98b9-891482898f48.png)
 
+Alternatively, you can use the "Action" setting in an automation to send Virtual Button and 'All Standby' commands, as shown below.
+
+![Action Settings](./action_example.png)
 
 ## Not implemented / TODO
 
