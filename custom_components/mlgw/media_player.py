@@ -264,7 +264,6 @@ class BeoSpeaker(MediaPlayerEntity):
             if self._ml is not None:
                 # The message comes from me --------------------------------------------------
                 if _event.data["from_device"] == self._ml:
-
                     # I am telling the system I am turning off
                     if _event.data["payload_type"] == "RELEASE":
                         _LOGGER.debug("ML: RELEASE id %s", self._ml)
@@ -457,7 +456,7 @@ class BeoSpeaker(MediaPlayerEntity):
             # for channel based sources, set channel number and image
             if ml_selectedsourcedict[_statusID] in ["TV", "DTV", "RADIO", "N.RADIO"]:
                 self._media_channel = channel_track
-                if channel_track > 0x00:
+                if channel_track > 0x00 and channel_track < 0xFF:
                     _ch_name, _ch_icon = self.ch_number_to_name_and_icon(
                         self._source, self._media_channel
                     )
