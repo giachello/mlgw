@@ -6,7 +6,7 @@ This component integrates Bang & Olufsen Master Link Gateway and Beolink Gateway
 
 [BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
 
-This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported through the gateway, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) instead to control media, because it natively supports more advanced NL features and has more reliable reporting of volume, media playback... You can of course use MLGW and BeoPlay at the same time. In that case, use MLGW to process the Light commands. 
+This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported through the gateway, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) instead to control media, because it natively supports more advanced NL features and has more reliable reporting of volume, media playback... You can of course use MLGW and BeoPlay at the same time. In that case, use MLGW to process the Light commands, and BeoPlay to control the device. 
 
 ![Mini Media Player](./mini_media_player.png)
 
@@ -17,11 +17,15 @@ This component connects to the MasterLink and Beolink Gateway and makes all your
 * With HACS: go to your HACS download panel, search for "MasterLink Gateway" and download from there. You need to restart.
 * Manually: Create a `mlgw` directory in `/config/custom_components/` and copy all the files in the `/custom_components/mlgw` repository into it.
 
-### Automatic configuration through Add Integrations (preferred)
+## Configuration 
 
 MLGW should show up through auto discovery in your Configuration->Integrations panel on Home Assistant. If you don't see it, go to "Configuration->Integrations-> (+)" and look for MLGW. After you configure it, autodiscovery may show the device again, but you can safely ignore that.
 
-The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct ML feature" (see below). If you select it, you have to use the admin account to login. Explicitly select or unselect the feature before continuing.
+The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct MasterLink" feature (see below). It allows all kinds of fun integrations. For example you can start and control your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
+
+The integration works also without this feature, but it's much better with it. To enable it, you must use the admin account to login. Explicitly select or unselect the feature before continuing.
+
+### Setting up devices
 
 The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Devices->Beolink and Programming->Sources) as seen in the pictures below. The sources will be reflected in the Home Assistant UI.
 
@@ -30,72 +34,16 @@ The plugin will automatically pick up the configuration from the the MLGW. The d
 ![Configuration MLGW](./mlgw_sources_config.png)
 
 
-If you set up Favorites in the MLGW configuration settings, the icons and the names of these radio stations will show up in Home Assistant.  You will need to store the icons somewhere on your local network, for example on Home Assistant's www folder. Replace the URL for the icon that is in the example below with your specific setup.
+Set up Favorites in the MLGW configuration settings, to configure radio stations. Similar to how the offical BeoLink app works, the icons and the names of these radio stations will show up in Home Assistant.  
+
+![Media Player](./media_player.png)
+
+You will need to reference icon urls on the Internet, or if you prefer more privacy, store the icons somewhere on your local network, for example on Home Assistant's www/icons folder, similar to the example in the picture below. Replace the URL with your specific situation.
 
 ![Configuration MLGW](./mlgw_favorites_config.png)
 
+There is also [a way to configure](./manual_config.md) through configuration.yaml for testing and hacking, but it is deprecated.
 
-### Manual configuration through Configuration.yaml (deprecated, I'll likely remove this in the future)
-
-This is an alternative to the configuration above if you prefer manual configuration. Add to Configuration.yaml (replace with your specific setup):
-
-```
-mlgw:
-  host: 192.168.1.10
-  username: admin
-  password: <your password>
-  use_mllog: true
-  default_source: A.MEM
-  available_sources:
-    - A.MEM
-    - CD
-    - RADIO
-  devices:
-    - name: Living Room
-    - name: Kitchen
-    - name: Patio
-    - name: Studio
-    - name: TV Room
-    - name: Bedroom
-    - name: Bathroom
-```
-
-Add the devices in the same order as the devices in the MLGW/BLGW configuration. The MLGW setup page is found in Setup -> Programming -> Devices -> MasterLink products. Each device must have a unique MLN and must be assigned using the buttons under _MasterLink products assignment_ further down on the same page.
-
-If you don't set a MLN (masterlink node number) for the devices, they need to be defined in the same order as the MLGW configuration, and MLNs will be assigned sequentially, starting from 1 for the first one. For example, the yaml configuration above, correspond to the MLGW configuration in the picture above.
-
-If you want to set specific MLNs then you can change the devices section to something like this. Note that if you give wrong MLNs the plugin won't work or might operate the wrong device.
-
-```
-  devices:
-    - name: Living Room
-      mln: 9
-    - name: Kitchen
-      mln: 11
-```
-
-You can also add a room number, corresponding to your MLGW configuration, and force a Masterlink ID for a device.
-
-```
-  devices:
-    - name: Living Room
-      room: 9
-      id: VIDEO_MASTER
-    - name: Kitchen
-      room: 1
-```
-
-Put any Network Link devices at the end of the list. They typically start at MLN 20. If you don't, the Direct Master Link Connection feature will get confused and the system will not work as intended.
-
-## Special Undocumented Feature: Direct Master Link Connection
-
-This integration uses a special undocumented feature of the Master Link Gateway that allows to listen into the actual ML traffic on the Masterlink bus and provides enhanced functionality. Specifically, it allows Home Assistant to fire events for things happening on the bus that wouldn't be provided by the stock MLGW official API, like speakers turning off, or key presses on the remote control.
-
-It allows all kinds of fun integrations. For example you can start and control your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
-
-For this to work, you must use **'username: admin'**, and the admin password as credentials for the MLGW and set **'use_mllog: true'** in the configuration.
-
-The integration works also without this feature, but it's much better with it.
 
 ## Using the integration
 
@@ -109,17 +57,19 @@ Remember that only one source is shared on all the Masterlink speakers (it's a s
 
 The implemented `media_player` commands include:
 
-` turn_on, turn_off, select_source, volume_up, volume_down, volume_mute, media_previous_track, media_next_track, media_play, media_stop, media_pause, shuffle_set, repeat_set`
+`turn_on, turn_off, select_source, volume_up, volume_down, volume_mute, media_previous_track, media_next_track, media_play, media_stop, media_pause, shuffle_set, repeat_set`
 
 ## Home Assistant Events
 
-The integration also forwards events to Home Assistant that you can use for your automations.
+The most powerful use of this integration is to listen to events on the B&O system to power your automations.
 
-### MasterLink Gateway official commands: Lights and Virtual Buttons
+### Lights and Virtual Buttons
 
-The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby".
+The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby". Light / Control and "All Standby" commands are also available as predefined [Triggers](https://www.home-assistant.io/docs/automation/trigger/). You will find the Triggers under the gateway device. 
 
-The `mlgw` component forwards these commands as events on the Home Assistant Events bus and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
+![Trigger example](./trigger_example.PNG)
+
+The `mlgw` component forwards these events to Home Assistant and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
 For example, if the user selects `LIGHT-1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
 
@@ -137,11 +87,13 @@ There are 5 events fired by the official integration:
 | mlgw.MLGW_telegram | source_status       | source_mln: device causing the event, source: the active Source (RADIO, CD, etc.), source_medium_position, source_position, source_activity: (Playing, Standby, etc.), picture_format are all information related to the specific source |
 | mlgw.MLGW_telegram | pict_sound_status   | source_mln: device causing the event, sound_status, speaker_mode, volume, screen1_mute, screen1_active, screen2_mute, screen2_active, cinema_mode, stereo_mode                                                                           |
 
-### Undocumented enhanced functionality
+### "Direct MasterLink"
 
-The enhanced Undocumented Feature forwards _ALL_ MasterLink events that happen on the bus so you can use them to drive much more interesting behavior. For example, you could:
+A special undocumented feature of the Master Link Gateway that allows to listen _ALL_ ML traffic on the Masterlink bus, including events that aren't be provided by B&O's standard apps, like a speaker turning off, or key presses on the remote control.
 
-- start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the button that typically activates the Aux input on the B&O equipment where you can connect a streaming devices like a Chromecast Audio).
+You can use them to drive much more interesting behavior. For example, you could:
+
+- start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the source associated with the Aux input on B&O equipment where you can connect a streaming devices like a Chromecast Audio).
 - use the "Blue" button to turn off a speaker and turn on another one when moving within the house
 - use the number buttons to select different 'streaming radios' through the ['netradio'](https://github.com/giachello/netradio) plugin.
 - use the up, down, wind, rewind buttons to switch Spotify playlists or move to the next song in the playlist.
