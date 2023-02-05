@@ -1,12 +1,8 @@
 # Bang & Olufsen MasterLink Gateway / BeoLink Gateway - Home Assistant component
 
-This component integrates Bang & Olufsen Master Link Gateway and Beolink Gateway to Home Assistant.
+This component integrates Bang & Olufsen [Masterlink Gateway](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/ML%20Gateway_Installation%20Guide%202v2.pdf) and [BeoLink Gateway](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home) with Home Assistant. 
 
-[Masterlink Gateway Product Description](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/ML%20Gateway_Installation%20Guide%202v2.pdf)
-
-[BeoLink Gateway Product Description](https://corporate.bang-olufsen.com/en/partners/for-professionals/smart-home)
-
-This component connects to the MasterLink and Beolink Gateway and makes all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. It uses an undocumented feature that enables functionality normally not provided even by the Bang & Olufsen official apps, like using your B&O remotes to control streaming devices on Home Assistant. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported through the gateway, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) instead to control media, because it natively supports more advanced NL features and has more reliable reporting of volume, media playback... You can of course use MLGW and BeoPlay at the same time. In that case, use MLGW to process the Light commands, and BeoPlay to control the device. 
+It will turn all your Bang & Olufsen audio and video devices into "media_player" entities in Home Assistant. An undocumented feature allows you to use your B&O remotes to control streaming devices and other features, which is not supported even by the standard B&O apps. If you don't have one, can buy a used ML Gateway on ebay for $100-200. While newer 'Network Link' devices are supported, I recommend using the [BeoPlay plugin](https://github.com/giachello/beoplay) that supports more advanced NL features. You can use MLGW and BeoPlay at the same time. In that case, use MLGW to process the Light commands, and BeoPlay to control the device. 
 
 ![Mini Media Player](./mini_media_player.png)
 
