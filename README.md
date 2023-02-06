@@ -15,22 +15,22 @@ It will turn all your Bang & Olufsen audio and video devices into "media_player"
 
 ## Configuration 
 
-MLGW should show up through auto discovery in your Configuration->Integrations panel on Home Assistant. If you don't see it, go to "Configuration->Integrations-> (+)" and look for MLGW. After you configure it, autodiscovery may show the device again, but you can safely ignore that.
+MLGW should show up through auto discovery in your Configuration->Integrations panel on Home Assistant. If you don't see it, go to "Configuration->Integrations-> (+)" and look for MLGW. 
 
-The configuration flow will ask for the host or IP address, username and password and whether to use the "Direct MasterLink" feature (see below). It allows all kinds of fun integrations. For example you can start and control your Spotify or other streaming integrations through your Beo4 or BeoOne remote control.
+The configuration flow will ask for the IP address of the MLGW, username and password and whether to use the "Direct MasterLink" backdoor (see below). This backdoor significantly increases the power of the plugin. For example, it allows you to can start and control your Spotify or other streaming integrations directly from your Beo4 or BeoOne remote control.
 
 The integration works also without this feature, but it's much better with it. To enable it, you must use the admin account to login. Explicitly select or unselect the feature before continuing.
 
 ### Setting up devices
 
-The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Devices->Beolink and Programming->Sources) as seen in the pictures below. The sources will be reflected in the Home Assistant UI.
+The plugin will automatically pick up the configuration from the the MLGW. The devices and their sources must be configured in the MLGW/BLGW setup page (Programming->Devices->Beolink and Programming->Sources) as seen in the pictures below. 
 
 ![Configuration MLGW](./mlgw_configuration.png)
 
 ![Configuration MLGW](./mlgw_sources_config.png)
 
 
-Set up Favorites in the MLGW configuration settings, to configure radio stations. Similar to how the offical BeoLink app works, the icons and the names of these radio stations will show up in Home Assistant.  
+Set up Favorites in the MLGW configuration settings, to configure radio stations. Similar to the offical BeoLink app, the icons and the names of these radio stations will show up in Home Assistant.  
 
 ![Media Player](./media_player.png)
 
