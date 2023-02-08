@@ -45,7 +45,7 @@ There is also [a way to configure](./manual_config.md) through configuration.yam
 
 ### Speakers and Bang & Olufsen Sources
 
-Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can integrate in your normal lovelace interface. I use [mini media player ](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and turn on the B&O sources from your Home Assistant dashboard.
+Beolink speakers (e.g., a [Beolab 3500](https://www.beoworld.org/prod_details.asp?pid=373) in your kitchen) will show up as normal "media_player" devices that you can control from Home Assistant, similar to what you'd get from the standard BeoLink app. I use [mini media player](https://github.com/kalkih/mini-media-player) because I like that it groups all items together. You can control volume and turn on the B&O sources from your Home Assistant dashboard.
 
 ![Mini Media Player](./mini_media_player.png)
 
@@ -57,15 +57,15 @@ The implemented `media_player` commands include:
 
 ## Home Assistant Events
 
-The most powerful use of this integration is to listen to events on the B&O system to power your automations.
+The more powerful use of this integration is to listen to events on the B&O system to power your automations.
 
 ### Lights and Virtual Buttons
 
-The normal MasterLink Gateway Protocol forwards the following commands: Virtual Buttons, Light / Control commands, Picture and Sound Status, Source Status, and "All Standby". Light / Control and "All Standby" commands are also available as predefined [Triggers](https://www.home-assistant.io/docs/automation/trigger/). 
+The `mlgw` component forwards  Virtual Buttons, Light / Control commands from the remove control, "All Standby" and other commands to Home Assistant. Automations on HA can use them to power automations. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
 
-The `mlgw` component forwards these events to Home Assistant and you can use them by listening to them. You can see what events fire with the Home Assistant "Events" UI. (Developer tools->Events->Listen to Events and type: `mlgw.MLGW_telegram` in the field on the bottom of the page).
+Light / Control and "All Standby" commands are also available as predefined [Triggers](https://www.home-assistant.io/docs/automation/trigger/). 
 
-For example, if the user selects `LIGHT-1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
+For example, if the user selects `LIGHT 1` on their Beo4 or BeoRemoteOne remote control, an Event in Home assistant will allow you to control your lights or a scene. Note that Light and Control events are only supported by the [devices listed here](http://mlgw.bang-olufsen.dk/source/documents/MLGW%20product%20compatibility.doc).
 
 The following Event Automation catches "All Standby" (which means the entire B&O system is turned off). You can use it to turn off Spotify streaming:
 
@@ -81,19 +81,19 @@ There are 5 events fired by the official integration:
 | mlgw.MLGW_telegram | source_status       | source_mln: device causing the event, source: the active Source (RADIO, CD, etc.), source_medium_position, source_position, source_activity: (Playing, Standby, etc.), picture_format are all information related to the specific source |
 | mlgw.MLGW_telegram | pict_sound_status   | source_mln: device causing the event, sound_status, speaker_mode, volume, screen1_mute, screen1_active, screen2_mute, screen2_active, cinema_mode, stereo_mode                                                                           |
 
-## Trigger Device Automations
+### Trigger Device Automations
 
-You can use a subset of LIGHT + \<key\> commands to generate automation triggers in a simple way for the MLGW gateway. Just create a new automation from the device screen for your MLGW. You will find the Triggers under the gateway device. "SanCarlos" below is the MLGW name, yours will be different.
+You can use a subset of LIGHT + \<key\> commands to generate automation triggers in a simple way for the MLGW gateway. Just create a new automation from the device screen for your MLGW. You will find the Triggers listed under the MLGW device name. In the example below, the device name is "SanCarlos". This is the same name configured in the MLGW configuration panel.
 
 ![Trigger example](./trigger_example.PNG)
 
 ### "Direct MasterLink"
 
-A special undocumented feature of the Master Link Gateway that allows to listen _ALL_ ML traffic on the Masterlink bus, including events that aren't be provided by B&O's standard apps, like a speaker turning off, or key presses on the remote control.
+A special undocumented feature of the Master Link Gateway allows captures _ALL_ traffic on the Masterlink bus, including events that aren't included in B&O's standard API, like a speaker turning off, or specific key presses on the remote control.
 
-You can use them to drive much more interesting behavior. For example, you could:
+You can use them to drive much more interesting behavior. For example, you can:
 
-- start Spotify by pressing the "green" button on your Beo4 remote after having selected A.MEM (the source associated with the Aux input on B&O equipment where you can connect a streaming devices like a Chromecast Audio).
+- start Spotify by pressing the "green" button on your Beo4 remote after selecting `A.MEM` (the source associated with the Aux input on B&O equipment where you can connect a streaming devices like a Chromecast Audio).
 - use the "Blue" button to turn off a speaker and turn on another one when moving within the house
 - use the number buttons to select different 'streaming radios' through the ['netradio'](https://github.com/giachello/netradio) plugin.
 - use the up, down, wind, rewind buttons to switch Spotify playlists or move to the next song in the playlist.
@@ -108,9 +108,8 @@ Another example is to stop playback when the "Stop" button is pressed on the rem
 
 ![stop event](./stop_event.png)
 
-A full list of BEO4 Keys is available starting at line 197 in this file: [https://github.com/giachello/mlgw/blob/main/custom_components/mlgw/const.py](https://github.com/giachello/mlgw/blob/main/custom_components/mlgw/const.py)
+There are a lot of ML telegram types; a few useful telegrams you can use in automations are listed in the table below. The most useful are likely going to be the BEO4_KEY (a key press on the B&O remote control). A full list of BEO4 Keys is available in this file: [const.py](https://github.com/giachello/mlgw/blob/main/custom_components/mlgw/const.py)
 
-There are too many ML telegram types to document here (and a lot are undocumented publicly), but a few particularly useful ones are listed below (see const.py and gateway.py for more information).
 
 | Event            | Payload Type     | Arguments              | Payload Argument                                                   | Description                                                                                  |
 | ---------------- | ---------------- | ---------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
@@ -124,15 +123,6 @@ There are too many ML telegram types to document here (and a lot are undocumente
 | mlgw.ML_telegram | MLGW_REMOTE_BEO4 | from_device, to_device | command, dest_selector                                             | The B&O app or Home Assistant sends a BEO4 command through the MLGW to a speaker (to_device) |
 | mlgw.ML_telegram | TRACK_INFO_LONG  | from_device, to_device | source, channel_track, activity                                    | Information about the track that is playing                                                  |
 
-_You can see what is being fired by the MasterLink bus by enabling "DEBUG" logging in Configuration.yaml. Then just look at your home-assistant.log file_
-
-```
-logger:
-  default: warning
-  logs:
-    custom_components.mlgw: debug
-```
-
 ## Sending Virtual Button Commands
 
 You can send virtual button commands to the MLGW/BLGW by using the `mlgw.virtual_button` service. This is useful if you want to activate macros on the MLGW. You can send PRESS, HOLD and RELEASE commands, but typically you will just need to send one PRESS. [This documentation file](http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/MlgwProto0240.pdf) describes how to use the HOLD and RELEASE commands.
@@ -143,10 +133,20 @@ Alternatively, you can use the "Action" setting in an automation to send Virtual
 
 ![Action Settings](./action_example.png)
 
+## Debugging
+
+You can see the details of the plugin operation, including what is being fired by the MasterLink bus by enabling "DEBUG" logging in Configuration.yaml. Then just look at your home-assistant.log file.
+
+```
+logger:
+  default: warning
+  logs:
+    custom_components.mlgw: debug
+```
+
 ## Not implemented / TODO
 
 - Timer and Clock packets unpacking
-- Media Information (e.g., track name, album name) is only implemented in part -- and only works with devices that transmit it like the BeoSound 5. I don't have such a device so would love if somebody can debug this for me.
 
 ## Known Issues
 
@@ -155,9 +155,9 @@ Alternatively, you can use the "Action" setting in an automation to send Virtual
 
 ## High level description of the code
 
-- **gateway.py** deals with the communication with the mlgw and is likely code that should go into a separate library / python module (pypi). it has some code to fire events on home assistant when things happen on the mlgw
-- **config_flow.py** is the configuration flow that asks the user the parameters for configuration and is home assistant specific. It stores the mlgw host and password configuration parameters inside HA which are then used by **\_\_init\_\_.py**. There is one piece of mlgw-specific code (to get the serial number through xmpp).
-- **\_\_init\_\_.py** is called by home assistant to start the module. It calls gateway.py to create a gateway instance. It also pulls the json configuration from the gateway that lists all the devices configured on the gateway.
-- **media_player.py** creates "MediaPlayer" entities in Home assistant for each mlgw device. The Beospeaker class essentially manages the communication to and from the mlgw on an ongoing basis. There is one instance of the class for each device in the mlgw configuration. It monitors the traffic on both the mlgw api and on the special masterlink backdoor I discovered.
+- **gateway.py** deals with the communication with the mlgw and is likely code that should go into a separate library / python module (PyPI). It has some code to fire events on home assistant when things happen on the MLGW.
+- **config_flow.py** is the configuration flow and is Home Assistant specific. It stores the MLGW host and password configuration parameters inside HA which are then used by **\_\_init\_\_.py**. There is one piece of MLGW-specific code (to get the serial number through XMPP).
+- **\_\_init\_\_.py** is called by Home Assistant to start the module. It calls gateway.py to create a gateway instance. It also pulls the json configuration from the gateway that lists all the devices configured on the gateway.
+- **media_player.py** creates "MediaPlayer" entities in Home assistant for each MLGW device. The `BeoSpeaker` class manages the communication to and from the MLGW on an ongoing basis. There is one instance of the class for each device (speaker, audio, TV) in the MLGW configuration. It monitors the traffic on both the MLGW api and on the special masterlink backdoor.
 
 Because the ml/mlgw is a single zone system and not all features are documented, there is a lot of random code to handle corner cases (e.g., if one speaker changes source, all other should too, because it's a single zone system, handling multiple video sources...).
