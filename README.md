@@ -17,7 +17,7 @@ It will turn all your Bang & Olufsen audio and video devices into "media_player"
 
 MLGW should show up through auto discovery in your Configuration->Integrations panel on Home Assistant. If you don't see it, go to "Configuration->Integrations-> (+)" and look for MLGW. 
 
-The configuration flow will ask for the IP address of the MLGW, username and password and whether to use the "Direct MasterLink" backdoor (see below). This backdoor significantly increases the power of the plugin. For example, it allows you to can start and control your Spotify or other streaming integrations directly from your Beo4 or BeoOne remote control.
+The configuration flow will ask for the IP address of the MLGW, username and password and whether to use the "Direct MasterLink" backdoor (see below). This backdoor significantly increases the power of the plugin. For example, to start and control your Spotify or other streaming integrations directly from your Beo4 or BeoOne remote control.
 
 The integration works also without this feature, but it's much better with it. To enable it, you must use the admin account to login. Explicitly select or unselect the feature before continuing.
 
@@ -147,6 +147,7 @@ logger:
 ## Not implemented / TODO
 
 - Timer and Clock packets unpacking
+- Remote Integration into Home Assistant
 
 ## Known Issues
 
