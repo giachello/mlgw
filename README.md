@@ -153,6 +153,7 @@ logger:
 
 - When a Audio Master or a Video Master starts playing a source that it owns (e.g., a BeoSound 3000 turning on A.MEM), it doesn't tell the ML bus that is happening, so we cannot detect it in the plugin. Unfortunately, there is no known solution.
 - When a Video Master has several sources active at the same time (e.g., a Decoder on 'TV' being played locally and a tuner on 'DTV' being distributed on the system) it reports both sources at the same time and that confuses the plugin.
+- Reports that certain NL products (e.g., Beosound 35) will forward LIGHT commands sent through a IR remote (e.g., Beo4) but not the Bluetooth remote (e.e., BeoRemote One). The workaround is to listen to the LIGHT events using my [BeoPlay plugin](https://github.com/giachello/beoplay).
 
 ## High level description of the code
 
