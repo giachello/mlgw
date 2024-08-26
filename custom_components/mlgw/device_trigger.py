@@ -1,36 +1,33 @@
+"""Provides device triggers for the MasterLink Gateway integration.
+
+Triggers include:
+* Control
+* Light
+for commonly used keys on the beo4 remote.
+
+Triggers will also include the room name or number (if no name is available).
+
 """
-    Provides device triggers for the MasterLink Gateway integration.
 
-    Triggers include:
-    * Control
-    * Light
-    for commonly used keys on the beo4 remote.
-
-    Triggers will also include the room name or number (if no name is available).
-
-"""
 from __future__ import annotations
 
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.helpers.trigger import (
-    TriggerActionType,
-    TriggerInfo,
-)
+
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_PLATFORM,
-    CONF_TYPE,
     CONF_ROOM,
+    CONF_TYPE,
 )
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import entity_registry
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, MLGW_EVENT_MLGW_TELEGRAM
 
@@ -143,10 +140,10 @@ async def async_get_triggers(
 ) -> list[dict[str, Any]]:
     """List device triggers for mlgw integration devices."""
 
-    registry = entity_registry.async_get(hass)
+    registry = er.async_get(hass)
     triggers = []
 
-    if not entity_registry.async_entries_for_device(registry, device_id):
+    if not er.async_entries_for_device(registry, device_id):
         base_trigger = {
             CONF_PLATFORM: "device",
             CONF_DEVICE_ID: device_id,
@@ -154,16 +151,16 @@ async def async_get_triggers(
             ROOM_ID: "",
         }
 
-        for triggertype in TRIGGER_TYPES:
-            for light_command in LIGHT_COMMANDS:
-                triggers.append(
-                    {
-                        **base_trigger,
-                        CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
-                        CONF_TYPE: triggertype,
-                        CONF_SUBTYPE: light_command,
-                    }
-                )
+        triggers = [
+            {
+                **base_trigger,
+                CONF_PAYLOAD_TYPE: PAYLOAD_LIGHT_CONTROL_EVENT,
+                CONF_TYPE: triggertype,
+                CONF_SUBTYPE: light_command,
+            }
+            for triggertype in TRIGGER_TYPES
+            for light_command in LIGHT_COMMANDS
+        ]
 
     return triggers
 

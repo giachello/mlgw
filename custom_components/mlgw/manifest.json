@@ -21,11 +21,11 @@
   "issue_tracker": "https://github.com/giachello/mlgw/issues",
   "requirements": [],
   "ssdp": [],
-  "version" : "2024.8.1",
+  "version" : "2024.8.2",
   "zeroconf": [
     {
-      "name": "*lgw*"
-      "type": "_http._tcp.local.",
+      "name": "*lgw*",
+      "type": "_http._tcp.local."
     }
   ]
 }

@@ -1,49 +1,55 @@
 """The MasterLink Gateway integration."""
-import asyncio
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.typing import ServiceDataType
-from .gateway import create_mlgw_gateway, MasterLinkGateway
-from .const import reverse_ml_destselectordict, reverse_ml_selectedsourcedict, BEO4_CMDS
-from .media_player import BeoSpeaker
-import logging
-import json
 
+import asyncio
+import logging
+
+import requests
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+from requests.exceptions import RequestException
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryNotReady
 from homeassistant.const import (
+    CONF_DEVICES,
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
-    CONF_DEVICES,
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, discovery
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    discovery,
+)
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.typing import ServiceDataType
 
 from .const import (
-    DOMAIN,
-    MLGW_GATEWAY,
-    MLGW_GATEWAY_CONFIGURATION_DATA,
-    MLGW_DEVICES,
-    CONF_MLGW_DEFAULT_SOURCE,
-    CONF_MLGW_AVAILABLE_SOURCES,
-    MLGW_DEFAULT_SOURCE,
-    MLGW_AVAILABLE_SOURCES,
-    CONF_MLGW_DEVICE_NAME,
-    CONF_MLGW_DEVICE_MLN,
-    CONF_MLGW_DEVICE_ROOM,
-    CONF_MLGW_DEVICE_MLID,
-    CONF_MLGW_USE_MLLOG,
-    BASE_URL,
-    TIMEOUT,
-    MLGW_CONFIG_JSON_PATH,
     ATTR_MLGW_ACTION,
     ATTR_MLGW_BUTTON,
+    BASE_URL,
+    BEO4_CMDS,
+    CONF_MLGW_AVAILABLE_SOURCES,
+    CONF_MLGW_DEFAULT_SOURCE,
+    CONF_MLGW_DEVICE_MLID,
+    CONF_MLGW_DEVICE_MLN,
+    CONF_MLGW_DEVICE_NAME,
+    CONF_MLGW_DEVICE_ROOM,
+    CONF_MLGW_USE_MLLOG,
+    DOMAIN,
+    MLGW_AVAILABLE_SOURCES,
+    MLGW_CONFIG_JSON_PATH,
+    MLGW_DEFAULT_SOURCE,
+    MLGW_DEVICES,
+    MLGW_GATEWAY,
+    MLGW_GATEWAY_CONFIGURATION_DATA,
+    TIMEOUT,
+    reverse_ml_destselectordict,
+    reverse_ml_selectedsourcedict,
     reverse_mlgw_virtualactiondict,
 )
-
+from .gateway import MasterLinkGateway, create_mlgw_gateway
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -97,8 +103,8 @@ PLATFORMS = ["media_player"]
 
 def yaml_to_json_config(manual_devices, availabe_sources):
     """Convert the YAML configuration into the equivalent json config from the MLGW."""
-    result = dict()
-    result["zones"] = list()
+    result = {}
+    result["zones"] = []
     i = 1
     for device in manual_devices:
         if CONF_MLGW_DEVICE_MLN in device.keys():
@@ -116,7 +122,7 @@ def yaml_to_json_config(manual_devices, availabe_sources):
         r = 0
         _zl = [w for w in result["zones"] if w["number"] == room]
         if len(_zl) == 0:
-            _z = dict()
+            _z = {}
             _z["number"] = room
             result["zones"].append(_z)
             r = result["zones"].index(_z)
@@ -124,16 +130,16 @@ def yaml_to_json_config(manual_devices, availabe_sources):
             r = result["zones"].index(_zl[0])
 
         if "products" not in result["zones"][r]:
-            result["zones"][r]["products"] = list()
+            result["zones"][r]["products"] = []
 
-        product = dict()
+        product = {}
         product["MLN"] = mln
         product["ML"] = ml
         product["name"] = device[CONF_MLGW_DEVICE_NAME]
 
-        device_sources = list()
+        device_sources = []
         for _x in availabe_sources:
-            _source = dict()
+            _source = {}
             _source["name"] = _x
             _source["destination"] = reverse_ml_destselectordict.get("AUDIO SOURCE")
             _source["format"] = "F0"
@@ -141,7 +147,7 @@ def yaml_to_json_config(manual_devices, availabe_sources):
             _source["link"] = 0
             _source["statusID"] = reverse_ml_selectedsourcedict.get(_x)
             _source["selectID"] = BEO4_CMDS.get(_x)
-            _source["selectCmds"] = list()
+            _source["selectCmds"] = []
             _source["selectCmds"].append({"cmd": BEO4_CMDS.get(_x), "format": "F0"})
             device_sources.append(_source)
 
@@ -207,8 +213,6 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 def get_mlgw_configuration_data(host: str, username: str, password: str):
     """Get the configuration data from the mlgw using the mlgwpservices.json endpoint."""
-    import requests
-    from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 
     # try with Digest Auth first
     response = requests.get(
@@ -245,6 +249,7 @@ def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
         if not gateway:
             return False
         gateway.mlgw_send_all_standby()
+        return True
 
     # Register the services
     hass.services.async_register(
@@ -264,7 +269,6 @@ def register_services(hass: HomeAssistant, gateway: MasterLinkGateway):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up MasterLink Gateway from a config entry."""
-    from requests.exceptions import RequestException
 
     host = entry.data.get(CONF_HOST)
     password = entry.data.get(CONF_PASSWORD)
@@ -275,7 +279,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         mlgw_configurationdata = await hass.async_add_executor_job(
             get_mlgw_configuration_data, host, username, password
         )
-    except (RequestException) as ex:
+    except RequestException as ex:
         # this will cause Home Assistant to retry setting up the integration later.
         raise ConfigEntryNotReady(f"Cannot connect to {host}, is it on?") from ex
 
@@ -296,9 +300,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     hass.data[DOMAIN][entry.entry_id] = {}
     hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY] = gateway
-    hass.data[DOMAIN][entry.entry_id][
-        MLGW_GATEWAY_CONFIGURATION_DATA
-    ] = mlgw_configurationdata
+    hass.data[DOMAIN][entry.entry_id][MLGW_GATEWAY_CONFIGURATION_DATA] = (
+        mlgw_configurationdata
+    )
     hass.data[DOMAIN][entry.entry_id]["serial"] = entry.unique_id
     _LOGGER.debug("Serial: %s", entry.unique_id)
 
@@ -314,10 +318,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(**device_info)
 
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
-        )
+    #    for component in PLATFORMS:
+    #        hass.async_create_task(
+    #            hass.config_entries.async_forward_entry_setup(entry, component)
+    #        )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     register_services(hass, gateway)
 

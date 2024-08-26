@@ -1,21 +1,15 @@
-"""
-The gateway to interact with a Bang & Olufsen MasterLink Gateway or BeoLink Gateway.
-"""
+"""The gateway to interact with a Bang & Olufsen MasterLink Gateway or BeoLink Gateway."""
+
 import asyncio
 from datetime import datetime
 import logging
-
-import telnetlib
 import socket
+import telnetlib  # need to port to telnetlib3 or exscript
 import threading
 import time
 
-from homeassistant.core import callback, HomeAssistant
-from homeassistant.const import (
-    STATE_OFF,
-    STATE_PLAYING,
-    EVENT_HOMEASSISTANT_STOP,
-)
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_PLAYING
+from homeassistant.core import HomeAssistant, callback
 
 from .const import *
 
@@ -35,9 +29,9 @@ class MasterLinkGateway:
         use_mllog,
         default_source,
         available_sources,
-        hass,
+        hass: HomeAssistant,
         config_entry_id=None,
-    ):
+    ) -> None:
         """Initialize the MLGW gateway."""
         # for both connections
         self._host = host
@@ -107,12 +101,14 @@ class MasterLinkGateway:
         self._devices = devices
 
     async def terminate_async(self):
-        """Terminate the gateway connections. Sets a flag that the listen threads look
-        at to determine when to quit"""
+        """Terminate the gateway connections.
+
+        Sets a flag that the listen threads look at to determine when to quit.
+        """
         self.stopped.set()
 
     async def async_ml_connect(self):
-        """Async version of the mlgw connect function"""
+        """Async version of the mlgw connect function."""
         loop = asyncio.get_event_loop()
         # start mlgw_connect(self) in a separate thread, suspend
         # the current coroutine, and resume when it's done
@@ -181,11 +177,11 @@ class MasterLinkGateway:
 
     # This is the thread function to manage the ML CLI connection
     def ml_thread(self):
-        """The thread that manages the connection with the MLGW API"""
+        """Manage the connection with the MLGW API."""
         connect_retries = 0
         max_connect_retries = 10
         retry_delay = 60
-        while connect_retries < max_connect_retries and not self.stopped.isSet():
+        while connect_retries < max_connect_retries and not self.stopped.is_set():
             try:
                 # if not connected, then connect
                 if not self._connectedML:
@@ -215,7 +211,7 @@ class MasterLinkGateway:
         _lastping = 0  # how many seconds ago was the last ping.
 
         input_bytes = ""
-        while not self.stopped.isSet():
+        while not self.stopped.is_set():
             try:  # nonblocking read from the connection
                 input_bytes = input_bytes + self._tn.read_until(
                     b"\n", _recvtimeout
@@ -227,7 +223,6 @@ class MasterLinkGateway:
                 raise
 
             if input_bytes.find("\n") > 0:  # if there is a full line
-
                 line = input_bytes[0 : input_bytes.find("\n")]
                 input_bytes = input_bytes[input_bytes.find("\n") + 1 :]
 
@@ -407,7 +402,9 @@ class MasterLinkGateway:
 
     def mlgw_send_beo4_select_source(self, mln, dest, source, sec_source, link):
         """Send Beo4 commmand and store the source name.
-        Should change to use a source ID."""
+
+        Should change to use a source ID.
+        """
         self._beolink_source = _dictsanitize(beo4_commanddict, source).upper()
         self.mlgw_send_beo4_cmd(mln, dest, source, sec_source, link)
 
@@ -426,14 +423,13 @@ class MasterLinkGateway:
             self.mlgw_send(MLGW_PL.get("REQUEST SERIAL NUMBER"), "")
             (_, self._serial) = self.mlgw_receive()
             _LOGGER.info("MLGW: Serial number is %s", self._serial)  # info
-        return
 
     def mlgw_thread(self):
-        """The thread that manages the connection with the MLGW API"""
+        """Manage the connection with the MLGW API."""
         connect_retries = 0
         max_connect_retries = 10
         retry_delay = 60
-        while connect_retries < max_connect_retries and not self.stopped.isSet():
+        while connect_retries < max_connect_retries and not self.stopped.is_set():
             try:
                 # if not connected, then connect
                 if not self._connectedMLGW:
@@ -462,12 +458,12 @@ class MasterLinkGateway:
         _LOGGER.warning("Shutting down MLGW API thread")
 
     def _mlgw_listen(self):
-        """Listen and manage the MLGW connection"""
+        """Listen and manage the MLGW connection."""
         _recvtimeout = 5  # timeout recv every 5 sec
         _lastping = 0  # how many seconds ago was the last ping.
         self._socket.settimeout(_recvtimeout)
 
-        while not (self.stopped.isSet() or self.brokensocket.isSet()):
+        while not (self.stopped.is_set() or self.brokensocket.is_set()):
             response = None
             try:
                 response = self._socket.recv(self.buffersize)
@@ -500,7 +496,7 @@ class MasterLinkGateway:
                     sourcePosition = _hexword(response[8], response[9])
                     sourceActivity = _getdictstr(mlgw_sourceactivitydict, response[10])
                     pictureFormat = _getdictstr(ml_pictureformatdict, response[11])
-                    decoded = dict()
+                    decoded = {}
                     decoded["payload_type"] = "source_status"
                     decoded["source_mln"] = sourceMLN
                     decoded["source"] = beolink_source
@@ -631,7 +627,9 @@ class MasterLinkGateway:
 
     def mlgw_receive(self):
         """Receive message from MLGW.
-        Returns a tuple: (payload type, payload)."""
+
+        Returns a tuple: (payload type, payload).
+        """
         if self._connectedMLGW:
             try:
                 _mlgwdata = self._socket.recv(self.buffersize)
@@ -652,6 +650,7 @@ class MasterLinkGateway:
                 str(_payloadstr),
             )
             return (_mlgwdata[1], str(_payloadstr))
+        return None
 
 
 # ########################################################################################
@@ -670,6 +669,7 @@ async def create_mlgw_gateway(
     available_sources=None,
 ):
     """Create the mlgw gateway.
+
     Hass: Home Assistant instance
     Host / User / Password: is the login information
     mlgw_configurationdata: the configuration information taken from the mlgw_pservices.json API
@@ -773,7 +773,9 @@ def decode_device(d):
 
 def decode_ml_to_dict(telegram) -> dict:
     """Convert a binary ML packet into a dict representation of the message.
-    telegram: the binary package"""
+
+    telegram: the binary package
+    """
     decoded = dict()
     decoded["from_device"] = decode_device(telegram[1])
     decoded["to_device"] = decode_device(telegram[0])
@@ -916,6 +918,7 @@ def decode_ml_to_dict(telegram) -> dict:
 
 # ########################################################################################
 # ##### Decode MLGW Protocol packet to readable string
+
 
 ## Get decoded string for mlgw packet's payload type
 #

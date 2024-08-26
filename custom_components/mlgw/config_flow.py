@@ -1,34 +1,33 @@
-"""
-
-Config flow for MasterLink Gateway integration.
+"""Config flow for MasterLink Gateway integration.
 
 Includes code from Lele-72. Thank you!
 
 """
-import logging
+
 import ipaddress
+import logging
 import re
-import voluptuous as vol
-import requests
 import socket
 import xml.etree.ElementTree as ET
-from requests.auth import HTTPDigestAuth, HTTPBasicAuth
-from requests.exceptions import ConnectTimeout
 
-from homeassistant import config_entries, core, exceptions, data_entry_flow
+import requests
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+from requests.exceptions import ConnectTimeout
+import voluptuous as vol
+
+from homeassistant import config_entries, core, data_entry_flow, exceptions
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 
 from .const import (
-    CONF_MLGW_USE_MLLOG,
     BASE_URL,
+    CONF_MLGW_USE_MLLOG,
+    DOMAIN,
     MLGW_CONFIG_JSON_PATH,
     TIMEOUT,
 )  # pylint:disable=unused-import
 
-from .const import DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
-_Discovered_MLGW : dict = { }
+_Discovered_MLGW: dict = {}
 
 # Data schema for the configuration flows
 USER_STEP_DATA_SCHEMA = vol.Schema(
@@ -60,6 +59,7 @@ def host_valid(host):
 
     ## Get serial number of mlgw
 
+
 # Get the MLGW/BLGW Serial number from the integrated Jabber Client
 #
 # This code causes the MLGW to crash if called too many times. Given that it is called every time there is
@@ -72,8 +72,8 @@ def host_valid(host):
 # <?xml version='1.0'?><stream:stream to='products.bang-olufsen.com' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'></stream:stream>
 # <stream:stream xmlns="jabber:client" version="1.0" xmlns:stream="http://etherx.jabber.org/streams" from="7060.2706081.22996958@products.bang-olufsen.com">
 
-async def mlgw_get_xmpp_serial(_host: str) -> str:
 
+async def mlgw_get_xmpp_serial(_host: str) -> str:
     if _host in _Discovered_MLGW:
         _LOGGER.debug("XMPP found cached sn")
         return _Discovered_MLGW[_host]
@@ -117,7 +117,7 @@ async def mlgw_get_xmpp_serial(_host: str) -> str:
 class CheckPasswordMLGWHub:
     """Checks Password for the MLGW Hub and gets basic information."""
 
-    def __init__(self, host):
+    def __init__(self, host) -> None:
         """Initialize."""
         self._host = host
         self._data = None
@@ -140,7 +140,7 @@ class CheckPasswordMLGWHub:
 
         if response.status_code == 401:
             _LOGGER.warning("Invalid authentication to MLGW")
-            raise InvalidAuth()
+            raise InvalidAuth
 
         if response.status_code != 200:
             return False
@@ -184,7 +184,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # TODO pick one of the available connection classes in homeassistant/config_entries.py
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize."""
         self.host = None
 
@@ -201,7 +201,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             if not host_valid(user_input[CONF_HOST]):
-                raise InvalidHost()
+                raise InvalidHost
 
             info = await validate_input(self.hass, user_input)
         except CannotConnect:
@@ -284,7 +284,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             if not host_valid(user_input[CONF_HOST]):
-                raise InvalidHost()
+                raise InvalidHost
 
             info = await validate_input(self.hass, user_input)
 

@@ -1,19 +1,21 @@
-"""
+"""Provides Device Actions for the integration.
+
 Provides the following Device Actions:
-   Virtual Buttons
-   All Standby
+Virtual Buttons
+All Standby
 """
+
 from __future__ import annotations
 
-import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
+
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_TYPE
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import entity_registry
+from homeassistant.helpers import entity_registry as er
+import homeassistant.helpers.config_validation as cv
 
+from . import DOMAIN, SERVICE_ALL_STANDBY, SERVICE_VIRTUAL_BUTTON
 from .const import ATTR_MLGW_BUTTON
-
-from . import DOMAIN, SERVICE_VIRTUAL_BUTTON, SERVICE_ALL_STANDBY
 
 ACTION_TYPES = {"all_standby", "virtual_button"}
 
@@ -41,10 +43,10 @@ async def async_get_actions(
     hass: HomeAssistant, device_id: str
 ) -> list[dict[str, str]]:
     """List device actions for aketest_integration devices."""
-    registry = entity_registry.async_get(hass)
+    registry = er.async_get(hass)
     actions = []
 
-    if not entity_registry.async_entries_for_device(registry, device_id):
+    if not er.async_entries_for_device(registry, device_id):
         base_action = {
             CONF_DEVICE_ID: device_id,
             CONF_DOMAIN: DOMAIN,
