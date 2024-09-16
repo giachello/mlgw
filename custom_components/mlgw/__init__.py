@@ -318,10 +318,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(**device_info)
 
-    #    for component in PLATFORMS:
-    #        hass.async_create_task(
-    #            hass.config_entries.async_forward_entry_setup(entry, component)
-    #        )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     register_services(hass, gateway)
