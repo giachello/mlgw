@@ -4,9 +4,10 @@ import asyncio
 from datetime import datetime
 import logging
 import socket
-import telnetlib  # need to port to telnetlib3 or exscript
 import threading
 import time
+
+import telnetlib3
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_PLAYING
 from homeassistant.core import HomeAssistant, callback
@@ -40,6 +41,9 @@ _LOGGER = logging.getLogger(__name__)
 
 class MasterLinkGateway:
     """Masterlink gateway to interact with a MasterLink Gateway http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/MlgwProto0240.pdf ."""
+
+    _reader: telnetlib3.TelnetReader = None
+    _writer: telnetlib3.TelnetWriter = None
 
     def __init__(
         self,
@@ -129,54 +133,51 @@ class MasterLinkGateway:
         """
         self.stopped.set()
 
+    # The following functions are used to read the events ML Gateway on the undocumented backdoor.
+
     async def async_ml_connect(self):
-        """Async version of the mlgw connect function."""
-        loop = asyncio.get_event_loop()
+        """Async version of the mlgw connect function. Connect the undocumented MasterLink stream."""
+        # loop = asyncio.get_event_loop()
         # start mlgw_connect(self) in a separate thread, suspend
         # the current coroutine, and resume when it's done
-        await loop.run_in_executor(None, self.ml_connect, self)
+        # await loop.run_in_executor(None, self.ml_connect, self)
+        self._reader, self._writer = await telnetlib3.open_connection(self._host)
 
-    def ml_connect(self):
-        """Connect the undocumented MasterLink stream."""
         _LOGGER.debug("Attempt to connect to ML CLI: %s", self._host)
         self._connectedML = False
 
         try:
-            self._tn = telnetlib.Telnet(self._host)
-
-            line = self._tn.read_until(b"login: ", 3)
+            line = await asyncio.wait_for(self._reader.readuntil(b"login: "), timeout=2)
             if line[-7:] != b"login: ":
                 _LOGGER.debug("Unexpected login prompt: %s", line)
                 raise ConnectionError
             # put some small pauses to see if we can avoid occasional login problems
-            time.sleep(0.1)
-            self._tn.write(self._password.encode("ascii") + b"\n")
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
+            self._writer.write(self._password + "\n")
+            await asyncio.sleep(0.1)
 
             # Try to read until we hit the command prompt.
             # BLGW has a "BLGW >" prompt. MLGW has a "MLGW >" prompt
             attempts = 0
             max_attempts = 3
             while attempts < max_attempts:
-                line = self._tn.read_until(
-                    b"LGW >", 2
+                line = await asyncio.wait_for(
+                    self._reader.readuntil(b"LGW >"), timeout=3
                 )  # the third line should be the prompt
                 attempts = attempts + 1
                 if line[-5:] == b"LGW >":
                     break
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
             if line[-5:] != b"LGW >":
                 _LOGGER.debug("Unexpected CLI prompt: %s", line)
                 raise ConnectionError
 
             # Enter the undocumented Masterlink Logging function
-            self._tn.write(b"_MLLOG ONLINE\r\n")
+            self._writer.write("_MLLOG ONLINE\r\n")
 
             self._connectedML = True
             _LOGGER.debug("Connected to ML CLI: %s", self._host)
-
-            return True
 
         except EOFError as exc:
             _LOGGER.warning("Error opening ML CLI connection to: %s", exc)
@@ -191,14 +192,14 @@ class MasterLinkGateway:
         if self._connectedML:
             self._connectedML = False
             try:
-                self._tn.close()
-                self._tn = None
+                self._writer.close()
+                self._reader.close()
             except OSError:
                 _LOGGER.error("Error closing ML CLI")
             _LOGGER.debug("Closed connection to ML CLI")
 
     # This is the thread function to manage the ML CLI connection
-    def ml_thread(self):
+    async def ml_thread(self):
         """Manage the connection with the MLGW API."""
         connect_retries = 0
         max_connect_retries = 10
@@ -207,27 +208,27 @@ class MasterLinkGateway:
             try:
                 # if not connected, then connect
                 if not self._connectedML:
-                    self.ml_connect()
+                    await self.async_ml_connect()
             except (ConnectionError, OSError):
                 # wait for 1 minute, max 10 times
-                time.sleep(retry_delay)
+                await asyncio.sleep(retry_delay)
                 connect_retries = connect_retries + 1
                 continue
             try:
                 connect_retries = 0  # if connect was successful, reset the attempts
-                self.ml_listen()
+                await self.ml_listen()
                 self.ml_close()
             except (ConnectionResetError, OSError, EOFError):
                 self.ml_close()
                 # wait for 1 minute, max 10 times
-                time.sleep(retry_delay)
+                await asyncio.sleep(retry_delay)
                 connect_retries = connect_retries + 1
                 continue
             except KeyboardInterrupt:
                 break
         _LOGGER.warning("Shutting down ML CLI thread")
 
-    def ml_listen(self):
+    async def ml_listen(self):
         """Receive notification about incoming event from the ML connection."""
         _recvtimeout = 5  # timeout recv every 5 sec
         _lastping = 0  # how many seconds ago was the last ping.
@@ -235,10 +236,15 @@ class MasterLinkGateway:
         input_bytes = ""
         while not self.stopped.is_set():
             try:  # nonblocking read from the connection
-                input_bytes = input_bytes + self._tn.read_until(
-                    b"\n", _recvtimeout
-                ).decode("ascii")
-
+                data = await asyncio.wait_for(
+                    self._reader.readuntil(b"\n"), _recvtimeout
+                )
+                input_bytes = input_bytes + data.decode("ascii")
+            except asyncio.exceptions.CancelledError as e:
+                _LOGGER.error("Failed with: {%s}", e)
+                continue
+            except asyncio.exceptions.TimeoutError:
+                continue
             except EOFError:
                 _LOGGER.error("ML CLI Thread: EOF Error")
                 self.ml_close()
@@ -258,9 +264,7 @@ class MasterLinkGateway:
 
                     encoded_telegram = decode_ml_to_dict(telegram)
                     encoded_telegram["timestamp"] = date_time_obj.isoformat()
-                    encoded_telegram["bytes"] = "".join(
-                        "{:02x}".format(x) for x in telegram
-                    )
+                    encoded_telegram["bytes"] = "".join(f"{x:02x}" for x in telegram)
 
                     # try to find the mln of the from_device and to_device
                     if self._devices is not None:
@@ -294,7 +298,7 @@ class MasterLinkGateway:
                 # Ping the gateway to test the connection every 10 minutes
                 if _lastping >= 600:
                     _LOGGER.debug("Sent NUL ping to ML")
-                    self._tn.write(bytes([0]))
+                    self._writer.write("\0")
                     _lastping = 0
                 continue
 
@@ -535,8 +539,7 @@ class MasterLinkGateway:
                     # not sure this works in all situations
                     sourcePositionInt = response[8] * 256 + response[9]
                     if (
-                        sourceActivity != "Standby"
-                        and sourceActivity != "Unknown"
+                        sourceActivity not in ("Standby", "Unknown")
                         and sourcePositionInt > 0
                         and self._devices is not None
                     ):
@@ -716,7 +719,8 @@ async def create_mlgw_gateway(
     threading.Thread(target=gateway.mlgw_thread).start()
 
     if use_mllog is True:
-        threading.Thread(target=gateway.ml_thread).start()
+        #        threading.Thread(target=gateway.ml_thread).start()
+        hass.loop.create_task(gateway.ml_thread())
 
     def _stop_listener(_event):
         gateway.stopped.set()
