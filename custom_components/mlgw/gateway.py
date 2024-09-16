@@ -11,7 +11,29 @@ import time
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_OFF, STATE_PLAYING
 from homeassistant.core import HomeAssistant, callback
 
-from .const import *
+from .const import (
+    MLGW_EVENT_ML_TELEGRAM,
+    MLGW_EVENT_MLGW_TELEGRAM,
+    MLGW_PL,
+    beo4_commanddict,
+    ml_command_type_dict,
+    ml_destselectordict,
+    ml_pictureformatdict,
+    ml_selectedsourcedict,
+    ml_state_dict,
+    ml_telegram_type_dict,
+    mlgw_cinemamodedict,
+    mlgw_lctypedict,
+    mlgw_loginstatusdict,
+    mlgw_payloadtypedict,
+    mlgw_screenactivedict,
+    mlgw_screenmutedict,
+    mlgw_soundstatusdict,
+    mlgw_sourceactivitydict,
+    mlgw_speakermodedict,
+    mlgw_stereoindicatordict,
+    mlgw_virtualactiondict,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -287,7 +309,7 @@ class MasterLinkGateway:
         self._hass.bus.async_fire(MLGW_EVENT_MLGW_TELEGRAM, telegram)
 
     async def async_mlgw_connect(self):
-        """Async version of the mlgw connect function"""
+        """Async version of the mlgw connect function."""
         loop = asyncio.get_event_loop()
         # start mlgw_connect(self) in a separate thread, suspend
         # the current coroutine, and resume when it's done
@@ -318,7 +340,7 @@ class MasterLinkGateway:
         )
 
     def mlgw_close(self):
-        """Close connection to mlgw"""
+        """Close connection to mlgw."""
         if self._connectedMLGW:
             self._connectedMLGW = False
             if self._socket is not None:
@@ -523,7 +545,7 @@ class MasterLinkGateway:
                                 x.set_source(response[5])
 
                 elif msg_byte == 0x03:  # Picture and Sound status
-                    decoded = dict()
+                    decoded = {}
                     decoded["payload_type"] = "pict_sound_status"
                     sourceMLN = response[4]
                     decoded["source_mln"] = sourceMLN
@@ -572,7 +594,7 @@ class MasterLinkGateway:
                                 break
                     lctype = _getdictstr(mlgw_lctypedict, response[5])
                     lccommand = _getbeo4commandstr(response[6])
-                    decoded = dict()
+                    decoded = {}
                     decoded["payload_type"] = "light_control_event"
                     decoded["room"] = lcroom
                     decoded["type"] = lctype
@@ -584,7 +606,7 @@ class MasterLinkGateway:
                         # set all connected devices state to off
                         for i in self._devices:
                             i.set_state(STATE_OFF)
-                    decoded = dict()
+                    decoded = {}
                     decoded["payload_type"] = "all_standby"
                     self._hass.add_job(self._notify_incoming_MLGW_telegram, decoded)
 
@@ -597,7 +619,7 @@ class MasterLinkGateway:
                     _LOGGER.debug(
                         "MLGW: Virtual button: %s %s", virtual_btn, virtual_action
                     )
-                    decoded = dict()
+                    decoded = {}
                     decoded["payload_type"] = "virtual_button"
                     decoded["button"] = virtual_btn
                     decoded["action"] = virtual_action
@@ -712,7 +734,7 @@ async def create_mlgw_gateway(
     try:
         await asyncio.wait_for(wait_to_connect(), timeout=20)
     except TimeoutError:
-        print("MLGW: timeout connecting with the MLGW!")
+        _LOGGER.warning("MLGW: timeout connecting with the MLGW!")
         return None
 
     return gateway
@@ -776,7 +798,7 @@ def decode_ml_to_dict(telegram) -> dict:
 
     telegram: the binary package
     """
-    decoded = dict()
+    decoded = {}
     decoded["from_device"] = decode_device(telegram[1])
     decoded["to_device"] = decode_device(telegram[0])
     decoded["type"] = _dictsanitize(ml_telegram_type_dict, telegram[3])
@@ -784,7 +806,7 @@ def decode_ml_to_dict(telegram) -> dict:
     decoded["orig_src"] = _dictsanitize(ml_selectedsourcedict, telegram[5])
     decoded["payload_type"] = _dictsanitize(ml_command_type_dict, telegram[7])
     decoded["payload_len"] = telegram[8]
-    decoded["payload"] = dict()
+    decoded["payload"] = {}
 
     # source status info
     # TTFF__TYDSOS__PTLLPS SR____LS______SLSHTR__ACSTPI________________________TRTR______
@@ -930,13 +952,11 @@ def _getpayloadtypestr(payloadtype):
 
 
 def _getroomstr(room):
-    result = "Room=" + str(room)
-    return result
+    return "Room=" + str(room)
 
 
 def _getmlnstr(mln):
-    result = "MLN=" + str(mln)
-    return result
+    return "MLN=" + str(mln)
 
 
 def _getbeo4commandstr(command):
