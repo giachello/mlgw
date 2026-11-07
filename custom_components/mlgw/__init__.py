@@ -312,11 +312,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         name=mlgw_configurationdata["project"],
         model="MasterLink Gateway",
         hw_version=mlgw_configurationdata["version"],
-        config_entry_id=entry.entry_id,
         configuration_url=f"http://{host}",
     )
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(**device_info)
+    device_registry.async_get_or_create(config_entry_id=entry.entry_id, **device_info)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
