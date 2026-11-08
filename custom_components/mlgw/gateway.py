@@ -42,8 +42,9 @@ _LOGGER = logging.getLogger(__name__)
 class MasterLinkGateway:
     """Masterlink gateway to interact with a MasterLink Gateway http://mlgw.bang-olufsen.dk/source/documents/mlgw_2.24b/MlgwProto0240.pdf ."""
 
-    _reader: telnetlib3.TelnetReader = None
-    _writer: telnetlib3.TelnetWriter = None
+    _reader: telnetlib3.TelnetReader | None = None
+    _writer: telnetlib3.TelnetWriter | None = None
+    _socket: socket.socket | None = None
 
     def __init__(
         self,
@@ -192,8 +193,8 @@ class MasterLinkGateway:
         if self._connectedML:
             self._connectedML = False
             try:
-                self._writer.close()
-                self._reader.close()
+                if self._writer is not None: self._writer.close()
+                if self._reader is not None: self._reader.close()
             except OSError:
                 _LOGGER.error("Error closing ML CLI")
             _LOGGER.debug("Closed connection to ML CLI")
@@ -236,10 +237,11 @@ class MasterLinkGateway:
         input_bytes = ""
         while not self.stopped.is_set():
             try:  # nonblocking read from the connection
-                data = await asyncio.wait_for(
-                    self._reader.readuntil(b"\n"), _recvtimeout
-                )
-                input_bytes = input_bytes + data.decode("ascii")
+                if self._reader is not None:
+                    data = await asyncio.wait_for(
+                        self._reader.readuntil(b"\n"), _recvtimeout
+                    )
+                    input_bytes = input_bytes + data.decode("ascii")
             except asyncio.exceptions.CancelledError as e:
                 _LOGGER.error("Failed with: {%s}", e)
                 continue
@@ -298,7 +300,8 @@ class MasterLinkGateway:
                 # Ping the gateway to test the connection every 10 minutes
                 if _lastping >= 600:
                     _LOGGER.debug("Sent NUL ping to ML")
-                    self._writer.write("\0")
+                    if self._writer is not None:
+                        self._writer.write("\0")
                     _lastping = 0
                 continue
 
@@ -317,7 +320,7 @@ class MasterLinkGateway:
         loop = asyncio.get_event_loop()
         # start mlgw_connect(self) in a separate thread, suspend
         # the current coroutine, and resume when it's done
-        await loop.run_in_executor(None, self.mlgw_connect, self)
+        await loop.run_in_executor(None, self.mlgw_connect)
 
     def mlgw_connect(self):
         """Open tcp connection to the mlgw API."""
@@ -326,7 +329,7 @@ class MasterLinkGateway:
 
         # open socket to masterlink gateway
         try:
-            self._socket: socket.socket = socket.socket(
+            self._socket = socket.socket(
                 socket.AF_INET, socket.SOCK_STREAM
             )
             self.brokensocket.clear()
@@ -382,7 +385,8 @@ class MasterLinkGateway:
             for p in payload:
                 _telegram.append(p)
             try:
-                self._socket.sendall(_telegram)
+                if self._socket is not None:
+                    self._socket.sendall(_telegram)
             except (OSError, BrokenPipeError):
                 self.brokensocket.set()
                 _LOGGER.warning("MLGW: socket broken pipe")
@@ -487,12 +491,14 @@ class MasterLinkGateway:
         """Listen and manage the MLGW connection."""
         _recvtimeout = 5  # timeout recv every 5 sec
         _lastping = 0  # how many seconds ago was the last ping.
-        self._socket.settimeout(_recvtimeout)
+        if self._socket is not None:
+            self._socket.settimeout(_recvtimeout)
 
         while not (self.stopped.is_set() or self.brokensocket.is_set()):
             response = None
             try:
-                response = self._socket.recv(self.buffersize)
+                if self._socket is not None:
+                    response = self._socket.recv(self.buffersize)
             except KeyboardInterrupt:
                 _LOGGER.warning("MLGW: keyboard interrupt in listen thread")
                 raise
@@ -656,14 +662,19 @@ class MasterLinkGateway:
         Returns a tuple: (payload type, payload).
         """
         if self._connectedMLGW:
+            _mlgwdata = None
             try:
-                _mlgwdata = self._socket.recv(self.buffersize)
+                if self._socket is not None:
+                    _mlgwdata = self._socket.recv(self.buffersize)
             except socket.timeout:
                 pass
             except KeyboardInterrupt:
                 _LOGGER.error("MLGW: KeyboardInterrupt, terminating")
                 self.mlgw_close()
-
+            
+            if _mlgwdata is None:
+                return None, None
+            
             _payloadstr = _getpayloadstr(_mlgwdata)
             if _mlgwdata[0] != 0x01:
                 _LOGGER.error("MLGW: Received telegram with SOH byte <> 0x01")
@@ -675,7 +686,7 @@ class MasterLinkGateway:
                 str(_payloadstr),
             )
             return (_mlgwdata[1], str(_payloadstr))
-        return None
+        return None, None
 
 
 # ########################################################################################

@@ -17,10 +17,12 @@ import voluptuous as vol
 
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.homeassistant.triggers import event as event_trigger
+from homeassistant.components.homeassistant.triggers.event import CONF_EVENT_TYPE
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
     CONF_PLATFORM,
+    CONF_EVENT_DATA,
     CONF_ROOM,
     CONF_TYPE,
 )
@@ -180,9 +182,9 @@ async def async_attach_trigger(
         CONF_ROOM: config[ROOM_ID],
     }
     event_config = {
-        event_trigger.CONF_PLATFORM: "event",
-        event_trigger.CONF_EVENT_DATA: event_data,
-        event_trigger.CONF_EVENT_TYPE: MLGW_EVENT_MLGW_TELEGRAM,
+        CONF_PLATFORM: "event",
+        CONF_EVENT_DATA: event_data,
+        CONF_EVENT_TYPE: MLGW_EVENT_MLGW_TELEGRAM,
     }
 
     event_config = event_trigger.TRIGGER_SCHEMA(event_config)

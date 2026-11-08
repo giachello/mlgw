@@ -64,16 +64,17 @@ async def async_call_action_from_config(
 ) -> None:
     """Execute a device action."""
     service_data = {}
+    service = None
 
     if config[CONF_TYPE] == "all_standby":
         service = SERVICE_ALL_STANDBY
     elif config[CONF_TYPE] == "virtual_button":
         service = SERVICE_VIRTUAL_BUTTON
         service_data[ATTR_MLGW_BUTTON] = config["code"]
-
-    await hass.services.async_call(
-        DOMAIN, service, service_data, blocking=True, context=context
-    )
+    if service is not None:
+        await hass.services.async_call(
+            DOMAIN, service, service_data, blocking=True, context=context
+        )
 
 
 async def async_get_action_capabilities(hass, config):
