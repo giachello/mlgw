@@ -22,7 +22,7 @@ from homeassistant.helpers import (
     device_registry as dr,
     discovery,
 )
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.typing import ServiceDataType
 
 from .const import (
