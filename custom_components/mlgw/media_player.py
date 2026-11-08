@@ -40,6 +40,7 @@ from homeassistant.components.media_player import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_PAUSED, STATE_PLAYING
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import (
@@ -504,9 +505,26 @@ class BeoSpeaker(MediaPlayerEntity):
             identifiers={(DOMAIN, self._mln)},
             name=self._name,
             manufacturer="Bang & Olufsen",
-            via_device=(DOMAIN, self._serial),
             suggested_area=self._roomName,
+            **self._via_gateway(),
         )
+
+    def _via_gateway(self) -> dict:
+        """Link this device to the gateway device.
+
+        Home Assistant 2026.8 deprecated `via_device` (removed in 2027.8) in
+        favour of `via_device_id`, the gateway's device registry id.
+        """
+        registry = dr.async_get(self.hass) if self.hass else None
+        config_entry = self.platform.config_entry if self.platform else None
+        if config_entry is not None and hasattr(
+            registry, "async_get_device_by_identifier"
+        ):
+            gateway = registry.async_get_device_by_identifier(
+                (DOMAIN, self._serial), config_entry.entry_id
+            )
+            return {"via_device_id": gateway.id if gateway else None}
+        return {"via_device": (DOMAIN, self._serial)}
 
     @property
     def friendly_name(self):
