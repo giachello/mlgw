@@ -144,11 +144,12 @@ logger:
     custom_components.mlgw: debug
 ```
 
-## BEO4 remote entities
+## Remote 
 
 Each configured speaker also has a command-only remote with the same name and
 device association, for example `remote.beo3500` and `media_player.beo3500`.
-Learning commands is not supported.
+Learning commands is not supported. It can send any BEO4 command to the device, 
+just as you would using a physical remote control.
 
 ```yaml
 action: remote.send_command
