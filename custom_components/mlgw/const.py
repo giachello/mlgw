@@ -288,7 +288,7 @@ beo4_commanddict = dict(
         (0x2D, "Eject"),
         (0x37, "Record"),
         (0x38, "Shift-Stop"),
-        (0x3F, "Select"),
+        (0x3F, "Medium Select"),
         (0x46, "Sound"),
         (0x7F, "Exit"),
         (0xC0, "Shift-0"), # Also: Edit

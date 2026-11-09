@@ -23,7 +23,7 @@
     "telnetlib3"
   ],
   "ssdp": [],
-  "version" : "2026.11.3",
+  "version" : "2026.11.4",
   "zeroconf": [
     {
       "name": "*lgw*",

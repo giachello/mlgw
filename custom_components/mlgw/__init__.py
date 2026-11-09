@@ -98,7 +98,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # TODO List the platforms that you want to support.
 # For your initial PR, limit it to 1 platform.
-PLATFORMS = ["media_player"]
+PLATFORMS = ["media_player", "remote"]
 
 
 def yaml_to_json_config(manual_devices, availabe_sources):
@@ -204,6 +204,9 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
     hass.async_create_task(
         discovery.async_load_platform(hass, "media_player", DOMAIN, {}, mlgw_config)
+    )
+    hass.async_create_task(
+        discovery.async_load_platform(hass, "remote", DOMAIN, {}, mlgw_config)
     )
 
     register_services(hass, gateway)

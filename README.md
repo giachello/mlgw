@@ -144,10 +144,71 @@ logger:
     custom_components.mlgw: debug
 ```
 
+## BEO4 remote entities
+
+Each configured speaker also has a command-only remote with the same name and
+device association, for example `remote.beo3500` and `media_player.beo3500`.
+Remotes work with both UI and YAML gateway configuration. They do not track
+power or availability, implement power actions, or learn commands.
+
+```yaml
+action: remote.send_command
+target:
+  entity_id: remote.beo3500
+data:
+  command:
+    - "Radio"
+    - "Digit-1"
+    - "Volume Up"
+  num_repeats: 1
+  delay_secs: 0.4
+```
+
+Commands are case-insensitive and surrounding whitespace is ignored. See the
+[complete command reference](docs/remote_commands.md). Digits `0` through `9`
+are aliases for `Digit-0` through `Digit-9`. `Select` and `Medium Select` are
+different commands. The listener wildcard `<all>` cannot be transmitted.
+Unknown commands or invalid options reject the entire sequence before sending.
+
+The optional standard `device` string specifies protocol fields, not another
+speaker: the target remote always supplies its own MLN. Fields are separated
+by semicolons:
+
+| Field | Values | Default |
+| --- | --- | --- |
+| `destination` | `Audio Source` (0x01), `Video Source` (0x00), `V.TAPE/V.MEM` (0x05), `All Products` (0x0F), `MLGW` (0x1B) | `Audio Source` |
+| `secondary` | `true`/`false` or `1`/`0` | `false` |
+| `link` | `true`/`false` or `1`/`0` | `false` |
+
+Destination names come from `ml_destselectordict` in `const.py` and are
+case-insensitive. Secondary sources require destination
+`v.tape/v.mem`. As specified in protocol sections 4.2–4.4, secondary byte 0x01
+addresses V.TAPE2/DVD2/V.MEM2; link byte 0x01 supplies the Beo4 LINK prefix.
+For example, select V.MEM2 with LINK enabled:
+
+```yaml
+action: remote.send_command
+target:
+  entity_id: remote.beo3500
+data:
+  device: "destination=v.tape/v.mem;secondary=true;link=true"
+  command: "V.Mem"
+```
+
+No routing is inferred from the playing source. Options apply to the entire
+call; use separate calls when options differ. `All Products` is the protocol destination
+selector, not a request to iterate over all remote entities (the manual describes
+it for ALL STANDBY).
+
+Repeats replay the whole sequence, with delays between transmissions. Concurrent
+remote sequences on the same gateway are serialized. `hold_secs` must be zero;
+send explicit commands such as `Go Repeat` and `Key Release` instead. A disconnected
+gateway raises an action error, but the protocol does not acknowledge delivery
+and a successful call cannot guarantee the product acted on the command.
+
 ## Not implemented / TODO
 
 - Timer and Clock packets unpacking
-- Remote Integration into Home Assistant
 
 ## Known Issues
 
