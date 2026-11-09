@@ -148,8 +148,7 @@ logger:
 
 Each configured speaker also has a command-only remote with the same name and
 device association, for example `remote.beo3500` and `media_player.beo3500`.
-Remotes work with both UI and YAML gateway configuration. They do not track
-power or availability, implement power actions, or learn commands.
+Learning commands is not supported.
 
 ```yaml
 action: remote.send_command
@@ -166,12 +165,10 @@ data:
 
 Commands are case-insensitive and surrounding whitespace is ignored. See the
 [complete command reference](docs/remote_commands.md). Digits `0` through `9`
-are aliases for `Digit-0` through `Digit-9`. `Select` and `Medium Select` are
-different commands. The listener wildcard `<all>` cannot be transmitted.
-Unknown commands or invalid options reject the entire sequence before sending.
+are aliases for `Digit-0` through `Digit-9`. Unknown commands or invalid 
+options reject the entire sequence before sending.
 
-The optional standard `device` string specifies protocol fields, not another
-speaker: the target remote always supplies its own MLN. Fields are separated
+The optional standard `device` string specifies protocol fields, separated
 by semicolons:
 
 | Field | Values | Default |
@@ -182,9 +179,7 @@ by semicolons:
 
 Destination names come from `ml_destselectordict` in `const.py` and are
 case-insensitive. Secondary sources require destination
-`v.tape/v.mem`. As specified in protocol sections 4.2–4.4, secondary byte 0x01
-addresses V.TAPE2/DVD2/V.MEM2; link byte 0x01 supplies the Beo4 LINK prefix.
-For example, select V.MEM2 with LINK enabled:
+`v.tape/v.mem`. For example, select V.MEM2 with LINK enabled:
 
 ```yaml
 action: remote.send_command
@@ -194,17 +189,6 @@ data:
   device: "destination=v.tape/v.mem;secondary=true;link=true"
   command: "V.Mem"
 ```
-
-No routing is inferred from the playing source. Options apply to the entire
-call; use separate calls when options differ. `All Products` is the protocol destination
-selector, not a request to iterate over all remote entities (the manual describes
-it for ALL STANDBY).
-
-Repeats replay the whole sequence, with delays between transmissions. Concurrent
-remote sequences on the same gateway are serialized. `hold_secs` must be zero;
-send explicit commands such as `Go Repeat` and `Key Release` instead. A disconnected
-gateway raises an action error, but the protocol does not acknowledge delivery
-and a successful call cannot guarantee the product acted on the command.
 
 ## Not implemented / TODO
 
